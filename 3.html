@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>*Seguiment Alumnes CFA La Pau</title>
+    <title>Seguiment Alumnes CFA La Pau</title>
     <style>
         * {
             margin: 0;
@@ -292,9 +292,42 @@
                     
                     <div class="form-row">
                         <div class="form-group">
+                            <label for="formCurs">Curs:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="formCurs" style="flex: 1;">
+                                    <option value="">Selecciona curs</option>
+                                </select>
+                                <input type="text" id="newCurs" placeholder="Nou curs (ex: 2027-28)" style="flex: 1;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="formEnsenyament">Ensenyament:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="formEnsenyament" style="flex: 1;">
+                                    <option value="">Selecciona ensenyament</option>
+                                </select>
+                                <input type="text" id="newEnsenyament" placeholder="Nou ensenyament" style="flex: 1;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formAlumne">Alumne:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="formAlumne" style="flex: 1;">
+                                    <option value="">Selecciona alumne</option>
+                                </select>
+                                <input type="text" id="newAlumne" placeholder="Nou alumne" style="flex: 1;">
+                            </div>
+                        </div>
+                        <div class="form-group">
                             <label for="newRecordDate">Data:</label>
                             <input type="date" id="newRecordDate" required>
                         </div>
+                    </div>
+                    
+                    <div class="form-row">
                         <div class="form-group">
                             <label for="newRecordType">Tipus:</label>
                             <select id="newRecordType" required>
@@ -334,7 +367,7 @@
 
     <script>
         // Configuració
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxzzEmNnW8cFPXejZJ4eAib456OQz-ZpYVnBZpYt91k_D0IvN2vVq_DI6hLEOxCD22l4A/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzd6sfDtBYIwpFUiw_qsq-2NH67df4QkAFvUFJXt7tlCEsGJPgTdMjofWCzvoYFUZTK/exec';
         const SHEET_ID = '1FWhKB7yu3rPFHMI8_Vzlqd1YzE68x86ZmuuV6Bbw55w';
         const FULL = 'Taula';
 
@@ -356,6 +389,14 @@
         const recordsTableBody = document.getElementById('recordsTableBody');
         const confirmationModal = document.getElementById('confirmationModal');
         const confirmationDetails = document.getElementById('confirmationDetails');
+        
+        // Elements del formulari
+        const formCurs = document.getElementById('formCurs');
+        const formEnsenyament = document.getElementById('formEnsenyament');
+        const formAlumne = document.getElementById('formAlumne');
+        const newCurs = document.getElementById('newCurs');
+        const newEnsenyament = document.getElementById('newEnsenyament');
+        const newAlumne = document.getElementById('newAlumne');
 
         // Inicialització
         document.addEventListener('DOMContentLoaded', function() {
@@ -378,6 +419,13 @@
             document.getElementById('confirmAddBtn').addEventListener('click', confirmAddRecord);
             document.getElementById('cancelAddBtn').addEventListener('click', hideConfirmation);
             document.getElementById('backToStartBtn').addEventListener('click', backToStart);
+            
+            // Event listeners per al formulari
+            formCurs.addEventListener('change', onFormCursChange);
+            formEnsenyament.addEventListener('change', onFormEnsenyamentChange);
+            newCurs.addEventListener('input', onNewCursInput);
+            newEnsenyament.addEventListener('input', onNewEnsenyamentInput);
+            newAlumne.addEventListener('input', onNewAlumneInput);
         }
 
         async function loadData() {
@@ -509,6 +557,9 @@
         function onAlumneChange() {
             currentSelection.alumne = alumneSelect.value;
             loadStudentBtn.disabled = !currentSelection.alumne;
+            
+            // No carregar automàticament la informació - esperar que l'usuari cliqui el botó
+            resetStudentInfo();
         }
 
         function resetAlumnes() {
@@ -538,18 +589,128 @@
             studentName.textContent = `${currentSelection.alumne} - ${currentSelection.ensenyament} (${currentSelection.curs})`;
             
             recordsTableBody.innerHTML = '';
-            studentRecords.forEach(record => {
+            
+            if (studentRecords.length === 0) {
                 const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${formatDate(record[3])}</td>
-                    <td><span class="tipo-badge tipo-${record[4]?.toLowerCase() || 'academic'}">${record[4] || 'N/A'}</span></td>
-                    <td>${record[5] || 'Sense anotació'}</td>
-                `;
+                row.innerHTML = `<td colspan="3" style="text-align: center; font-style: italic; color: #666;">No hi ha registres per aquest alumne</td>`;
                 recordsTableBody.appendChild(row);
-            });
+            } else {
+                studentRecords.forEach(record => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${formatDate(record[3])}</td>
+                        <td><span class="tipo-badge tipo-${record[4]?.toLowerCase().replace('è', 'e').replace('ó', 'o') || 'academic'}">${record[4] || 'N/A'}</span></td>
+                        <td>${record[5] || 'Sense anotació'}</td>
+                    `;
+                    recordsTableBody.appendChild(row);
+                });
+            }
 
+            // Inicialitzar el formulari amb les dades seleccionades
+            initializeForm();
+            
             studentInfo.classList.remove('hidden');
             studentInfo.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function initializeForm() {
+            // Poblar el formulari amb les opcions disponibles
+            populateFormCursos();
+            populateFormEnsenyaments();
+            populateFormAlumnes();
+            
+            // Preseleccionar les opcions actuals
+            formCurs.value = currentSelection.curs;
+            formEnsenyament.value = currentSelection.ensenyament;
+            formAlumne.value = currentSelection.alumne;
+        }
+        
+        function populateFormCursos() {
+            const cursos = [...new Set(allData.map(row => row[0]))].filter(Boolean).sort();
+            formCurs.innerHTML = '<option value="">Selecciona curs</option>';
+            cursos.forEach(curs => {
+                const option = document.createElement('option');
+                option.value = curs;
+                option.textContent = curs;
+                formCurs.appendChild(option);
+            });
+        }
+        
+        function populateFormEnsenyaments() {
+            const selectedCurs = formCurs.value || newCurs.value;
+            if (!selectedCurs) {
+                formEnsenyament.innerHTML = '<option value="">Selecciona primer un curs</option>';
+                return;
+            }
+            
+            const ensenyaments = [...new Set(allData
+                .filter(row => row[0] === selectedCurs)
+                .map(row => row[1]))
+            ].filter(Boolean).sort();
+            
+            formEnsenyament.innerHTML = '<option value="">Selecciona ensenyament</option>';
+            ensenyaments.forEach(ensenyament => {
+                const option = document.createElement('option');
+                option.value = ensenyament;
+                option.textContent = ensenyament;
+                formEnsenyament.appendChild(option);
+            });
+        }
+        
+        function populateFormAlumnes() {
+            const selectedCurs = formCurs.value || newCurs.value;
+            const selectedEnsenyament = formEnsenyament.value || newEnsenyament.value;
+            
+            if (!selectedCurs || !selectedEnsenyament) {
+                formAlumne.innerHTML = '<option value="">Selecciona primer curs i ensenyament</option>';
+                return;
+            }
+            
+            const alumnes = [...new Set(allData
+                .filter(row => row[0] === selectedCurs && row[1] === selectedEnsenyament)
+                .map(row => row[2]))
+            ].filter(Boolean).sort();
+            
+            formAlumne.innerHTML = '<option value="">Selecciona alumne</option>';
+            alumnes.forEach(alumne => {
+                const option = document.createElement('option');
+                option.value = alumne;
+                option.textContent = alumne;
+                formAlumne.appendChild(option);
+            });
+        }
+        
+        // Event listeners per al formulari
+        function onFormCursChange() {
+            newCurs.value = '';
+            populateFormEnsenyaments();
+            populateFormAlumnes();
+        }
+        
+        function onFormEnsenyamentChange() {
+            newEnsenyament.value = '';
+            populateFormAlumnes();
+        }
+        
+        function onNewCursInput() {
+            if (newCurs.value) {
+                formCurs.value = '';
+                populateFormEnsenyaments();
+                populateFormAlumnes();
+            }
+        }
+        
+        function onNewEnsenyamentInput() {
+            if (newEnsenyament.value) {
+                formEnsenyament.value = '';
+                populateFormAlumnes();
+            }
+        }
+        
+        function onNewAlumneInput() {
+            if (newAlumne.value) {
+                formAlumne.value = '';
+            }
         }
 
         function parseDate(dateStr) {
@@ -571,9 +732,14 @@
             const date = document.getElementById('newRecordDate').value;
             const type = document.getElementById('newRecordType').value;
             const note = document.getElementById('newRecordNote').value;
+            
+            // Obtenir valors del formulari (prioritzar nous valors)
+            const cursValue = newCurs.value.trim() || formCurs.value;
+            const ensenyamentValue = newEnsenyament.value.trim() || formEnsenyament.value;
+            const alumneValue = newAlumne.value.trim() || formAlumne.value;
 
-            if (!date || !type || !note.trim()) {
-                showError('Si us plau, omple tots els camps.');
+            if (!cursValue || !ensenyamentValue || !alumneValue || !date || !type || !note.trim()) {
+                showError('Si us plau, omple tots els camps obligatoris.');
                 return;
             }
 
@@ -581,9 +747,9 @@
             
             confirmationDetails.innerHTML = `
                 <div style="text-align: left; margin: 20px 0;">
-                    <p><strong>Alumne:</strong> ${currentSelection.alumne}</p>
-                    <p><strong>Ensenyament:</strong> ${currentSelection.ensenyament}</p>
-                    <p><strong>Curs:</strong> ${currentSelection.curs}</p>
+                    <p><strong>Curs:</strong> ${cursValue}</p>
+                    <p><strong>Ensenyament:</strong> ${ensenyamentValue}</p>
+                    <p><strong>Alumne:</strong> ${alumneValue}</p>
                     <p><strong>Data:</strong> ${formattedDate}</p>
                     <p><strong>Tipus:</strong> ${type}</p>
                     <p><strong>Anotació:</strong> ${note}</p>
@@ -605,15 +771,20 @@
                 const type = document.getElementById('newRecordType').value;
                 const note = document.getElementById('newRecordNote').value;
                 
+                // Obtenir valors del formulari
+                const cursValue = newCurs.value.trim() || formCurs.value;
+                const ensenyamentValue = newEnsenyament.value.trim() || formEnsenyament.value;
+                const alumneValue = newAlumne.value.trim() || formAlumne.value;
+                
                 const formattedDate = new Date(date).toLocaleDateString('ca-ES');
                 
                 const result = await makeJSONPRequest({
                     action: 'write',
                     sheetId: SHEET_ID,
                     sheetName: FULL,
-                    curs: currentSelection.curs,
-                    ensenyament: currentSelection.ensenyament,
-                    alumne: currentSelection.alumne,
+                    curs: cursValue,
+                    ensenyament: ensenyamentValue,
+                    alumne: alumneValue,
                     data: formattedDate,
                     tipus: type,
                     anotacio: note
@@ -623,7 +794,23 @@
                     showSuccess('Registre afegit correctament!');
                     hideConfirmation();
                     clearForm();
+                    
+                    // Actualitzar selecció actual amb els nous valors
+                    currentSelection.curs = cursValue;
+                    currentSelection.ensenyament = ensenyamentValue;
+                    currentSelection.alumne = alumneValue;
+                    
+                    // Recarregar dades i mostrar informació actualitzada
                     await loadData();
+                    
+                    // Actualitzar selectors principals
+                    cursSelect.value = cursValue;
+                    populateEnsenyaments();
+                    ensenyamentSelect.value = ensenyamentValue;
+                    populateAlumnes();
+                    alumneSelect.value = alumneValue;
+                    
+                    // Mostrar informació actualitzada de l'alumne
                     loadStudentInfo();
                 } else {
                     showError('Error afegint el registre: ' + result.message);
@@ -639,6 +826,11 @@
             document.getElementById('newRecordDate').value = new Date().toISOString().split('T')[0];
             document.getElementById('newRecordType').value = '';
             document.getElementById('newRecordNote').value = '';
+            
+            // No netejar els selectors del formulari per mantenir el context
+            newCurs.value = '';
+            newEnsenyament.value = '';
+            newAlumne.value = '';
         }
 
         function backToStart() {
