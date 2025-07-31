@@ -41,7 +41,7 @@
 
     <div id="main-app" class="flex flex-col items-center min-h-screen">
         <header class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">Seguiment d'Alumnes CFA La Pau 2</h1>
+            <h1 class="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">Seguiment d'Alumnes CFA La Pau</h1>
             <p class="text-gray-600 text-lg">Consulta i afegeix anotacions dels alumnes</p>
         </header>
 
@@ -274,16 +274,22 @@
         // === Crides a la API de Google Apps Script ===
         async function fetchSheetData() {
             showLoading();
+            if (SCRIPT_URL === 'AQUÍ_POSA_LA_TEVA_NOVA_URL') {
+                alert('Si us plau, actualitza la constant SCRIPT_URL amb la URL del teu script de Google Apps abans de continuar.');
+                hideLoading();
+                return;
+            }
             try {
                 const response = await fetch(`${SCRIPT_URL}?sheetId=${SHEET_ID}`);
                 if (!response.ok) {
-                    throw new Error('No es va poder carregar la informació del Google Sheet.');
+                    // Millora de la gestió d'errors
+                    throw new Error(`Error de xarxa o de configuració del script. Codi d'estat: ${response.status}`);
                 }
                 const data = await response.json();
                 appData = data;
             } catch (error) {
                 console.error('Error en carregar les dades:', error);
-                alert('Error en carregar les dades. Revisa la consola per a més detalls.');
+                alert(`Error en carregar les dades: ${error.message}. Assegura't que el teu script de Google Apps estigui implementat com a "Aplicació web" amb accés a "Qualsevol persona" i que el codi del script estigui retornant una resposta vàlida.`);
             } finally {
                 hideLoading();
             }
@@ -291,10 +297,15 @@
 
         async function appendNewRecord(record) {
             showLoading();
+            if (SCRIPT_URL === 'AQUÍ_POSA_LA_TEVA_NOVA_URL') {
+                alert('Si us plau, actualitza la constant SCRIPT_URL amb la URL del teu script de Google Apps abans de continuar.');
+                hideLoading();
+                return;
+            }
             try {
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    mode: 'cors',
                     cache: 'no-cache',
                     headers: {
                         'Content-Type': 'application/json'
@@ -302,11 +313,18 @@
                     body: JSON.stringify({ sheetId: SHEET_ID, record })
                 });
 
-                console.log('Dades enviades. Esperant que el script processi la petició.');
+                if (!response.ok) {
+                    throw new Error(`Error en l'enviament de dades. El servidor no ha respost correctament. Codi d'estat: ${response.status}`);
+                }
+                
+                // Donem un parell de segons perquè la fulla de càlcul s'actualitzi
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                console.log('Dades enviades amb èxit.');
                 
             } catch (error) {
                 console.error('Error en guardar les dades:', error);
-                alert('Error en guardar les dades. Revisa la consola per a més detalls.');
+                alert(`Error en guardar les dades: ${error.message}. Revisa la consola per a més detalls.`);
             } finally {
                 hideLoading();
             }
@@ -419,10 +437,6 @@
         }
 
         async function init() {
-            if (SCRIPT_URL === 'AQUÍ_POSA_LA_TEVA_NOVA_URL') {
-                alert('Si us plau, actualitza la constant SCRIPT_URL amb la nova URL del teu script de Google Apps abans de continuar.');
-                return;
-            }
             await fetchSheetData();
             if (Object.keys(appData).length > 0) {
                 loadCursos(cursSelect);
