@@ -431,20 +431,54 @@
         async function loadData() {
             try {
                 showLoading('Carregant dades...');
-                const data = await makeJSONPRequest({
-                    action: 'read',
-                    sheetId: SHEET_ID,
-                    sheetName: FULL
-                });
+                console.log('Intentant carregar dades des de:', SCRIPT_URL);
                 
-                if (data.success) {
-                    allData = data.data;
-                    populateEnsenyaments();
-                } else {
-                    showError('Error carregant les dades: ' + data.message);
+                // Primer intentar amb JSONP
+                try {
+                    const data = await makeJSONPRequest({
+                        action: 'read',
+                        sheetId: SHEET_ID,
+                        sheetName: FULL
+                    });
+                    
+                    if (data && data.success) {
+                        allData = data.data || [];
+                        console.log('Dades carregades correctament:', allData.length, 'registres');
+                        populateEnsenyaments();
+                        return;
+                    } else {
+                        throw new Error(data ? data.message : 'Resposta invàlida del servidor');
+                    }
+                } catch (jsonpError) {
+                    console.warn('JSONP ha fallat, provant fetch normal:', jsonpError);
+                    
+                    // Fallback amb fetch normal
+                    const url = `${SCRIPT_URL}?action=read&sheetId=${SHEET_ID}&sheetName=${FULL}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        allData = data.data || [];
+                        console.log('Dades carregades amb fetch:', allData.length, 'registres');
+                        populateEnsenyaments();
+                    } else {
+                        throw new Error(data.message || 'Error desconegut');
+                    }
                 }
+                
             } catch (error) {
-                showError('Error de connexió: ' + error.message);
+                console.error('Error carregant dades:', error);
+                showError('Error de connexió: ' + error.message + '. Verifica que l\'script de Google Apps Script estigui desplegat correctament.');
+                
+                // Dades de prova per debug
+                console.log('Carregant dades de prova...');
+                allData = [
+                    ['2025-26', 'Informàtica', 'Joan Pérez', '15/01/2025', 'acadèmic', 'Bon rendiment'],
+                    ['2025-26', 'Informàtica', 'Maria García', '14/01/2025', 'social', 'Integració correcta'],
+                    ['2026-27', 'Administració', 'Pere Martí', '13/01/2025', 'absentisme', 'Faltes recurrents']
+                ];
+                populateEnsenyaments();
+                showError('AVÍS: S\'estan mostrant dades de prova. Verifica la connexió al Google Sheets.');
             } finally {
                 hideLoading();
             }
@@ -454,44 +488,65 @@
         function makeJSONPRequest(params) {
             return new Promise((resolve, reject) => {
                 const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+                let script = null;
+                let timeoutId = null;
                 
-                // Crear script element
-                const script = document.createElement('script');
-                const url = new URL(SCRIPT_URL);
-                
-                // Afegir paràmetres
-                Object.keys(params).forEach(key => {
-                    url.searchParams.append(key, params[key]);
-                });
-                url.searchParams.append('callback', callbackName);
-                
-                script.src = url.toString();
-                
-                // Crear callback global
-                window[callbackName] = function(data) {
-                    document.body.removeChild(script);
-                    delete window[callbackName];
-                    resolve(data);
-                };
-                
-                // Gestionar errors
-                script.onerror = function() {
-                    document.body.removeChild(script);
-                    delete window[callbackName];
-                    reject(new Error('Error carregant l\'script'));
-                };
-                
-                // Afegir script al DOM
-                document.body.appendChild(script);
-                
-                // Timeout
-                setTimeout(() => {
-                    if (window[callbackName]) {
-                        document.body.removeChild(script);
-                        delete window[callbackName];
-                        reject(new Error('Timeout de la petició'));
+                // Funció de neteja
+                const cleanup = () => {
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
                     }
-                }, 10000);
+                    if (window[callbackName]) {
+                        delete window[callbackName];
+                    }
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                };
+                
+                try {
+                    // Crear script element
+                    script = document.createElement('script');
+                    const url = new URL(SCRIPT_URL);
+                    
+                    // Afegir paràmetres
+                    Object.keys(params).forEach(key => {
+                        if (params[key] !== null && params[key] !== undefined) {
+                            url.searchParams.append(key, params[key]);
+                        }
+                    });
+                    url.searchParams.append('callback', callbackName);
+                    
+                    console.log('JSONP URL:', url.toString());
+                    script.src = url.toString();
+                    
+                    // Crear callback global
+                    window[callbackName] = function(data) {
+                        cleanup();
+                        console.log('JSONP resposta rebuda:', data);
+                        resolve(data);
+                    };
+                    
+                    // Gestionar errors
+                    script.onerror = function(error) {
+                        cleanup();
+                        console.error('Error JSONP script:', error);
+                        reject(new Error('Error carregant l\'script JSONP'));
+                    };
+                    
+                    // Timeout
+                    timeoutId = setTimeout(() => {
+                        cleanup();
+                        reject(new Error('Timeout de la petició JSONP (15s)'));
+                    }, 15000);
+                    
+                    // Afegir script al DOM
+                    document.head.appendChild(script);
+                    
+                } catch (error) {
+                    cleanup();
+                    reject(error);
+                }
             });
         }
 
@@ -778,10 +833,7 @@
                 
                 const formattedDate = new Date(date).toLocaleDateString('ca-ES');
                 
-                const result = await makeJSONPRequest({
-                    action: 'write',
-                    sheetId: SHEET_ID,
-                    sheetName: FULL,
+                console.log('Afegint registre:', {
                     curs: cursValue,
                     ensenyament: ensenyamentValue,
                     alumne: alumneValue,
@@ -790,7 +842,40 @@
                     anotacio: note
                 });
                 
-                if (result.success) {
+                let result;
+                try {
+                    result = await makeJSONPRequest({
+                        action: 'write',
+                        sheetId: SHEET_ID,
+                        sheetName: FULL,
+                        curs: cursValue,
+                        ensenyament: ensenyamentValue,
+                        alumne: alumneValue,
+                        data: formattedDate,
+                        tipus: type,
+                        anotacio: note
+                    });
+                } catch (jsonpError) {
+                    console.warn('JSONP write ha fallat, provant fetch:', jsonpError);
+                    
+                    // Fallback amb fetch
+                    const params = new URLSearchParams({
+                        action: 'write',
+                        sheetId: SHEET_ID,
+                        sheetName: FULL,
+                        curs: cursValue,
+                        ensenyament: ensenyamentValue,
+                        alumne: alumneValue,
+                        data: formattedDate,
+                        tipus: type,
+                        anotacio: note
+                    });
+                    
+                    const response = await fetch(`${SCRIPT_URL}?${params.toString()}`);
+                    result = await response.json();
+                }
+                
+                if (result && result.success) {
                     showSuccess('Registre afegit correctament!');
                     hideConfirmation();
                     clearForm();
@@ -813,9 +898,10 @@
                     // Mostrar informació actualitzada de l'alumne
                     loadStudentInfo();
                 } else {
-                    showError('Error afegint el registre: ' + result.message);
+                    showError('Error afegint el registre: ' + (result ? result.message : 'Resposta invàlida'));
                 }
             } catch (error) {
+                console.error('Error afegint registre:', error);
                 showError('Error de connexió: ' + error.message);
             } finally {
                 hideLoading();
