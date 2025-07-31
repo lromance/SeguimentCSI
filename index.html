@@ -84,7 +84,7 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-100">
                             <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Data</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider w-32">Data</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Tipus</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">Anotació</th>
                             </tr>
@@ -149,11 +149,11 @@
                 <!-- Camps per a la nova anotació -->
                 <div class="mb-4">
                     <label for="data-input" class="block text-gray-700 font-medium mb-1">Data</label>
-                    <input type="date" id="data-input" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 transition-colors" required>
+                    <input type="date" id="data-input" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 transition-colors">
                 </div>
                 <div class="mb-4">
                     <label for="tipus-select" class="block text-gray-700 font-medium mb-1">Tipus</label>
-                    <select id="tipus-select" class="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" required>
+                    <select id="tipus-select" class="w-full p-2 border border-gray-300 rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
                         <option value="">Selecciona un tipus</option>
                         <option value="acadèmic">Acadèmic</option>
                         <option value="social">Social</option>
@@ -164,7 +164,7 @@
                 </div>
                 <div class="mb-6">
                     <label for="anotacio-textarea" class="block text-gray-700 font-medium mb-1">Anotació</label>
-                    <textarea id="anotacio-textarea" rows="3" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 resize-none transition-colors" placeholder="Escriu una anotació curta/mitja..." required></textarea>
+                    <textarea id="anotacio-textarea" rows="3" class="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 resize-none transition-colors" placeholder="Escriu una anotació curta/mitja..."></textarea>
                 </div>
                 <div class="flex justify-end gap-4">
                     <button type="button" id="cancel-form-btn" class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors duration-200">
@@ -203,11 +203,10 @@
 
     <script>
         // === CONFIGURACIÓ ===
-        // IMPORTANT: Aquí has de enganxar l'URL del teu Google Apps Script
-        const SCRIPT_URL = 'https://script.google.com/a/macros/cfalapau.cat/s/AKfycbwcPeHdbwQfsog35QDZPRftk3HGf2r0xFjGLO8PWZmiBaDLUIbicoir3QCZGNNTLa7f-Q/exec'; // Placeholder per l'exemple, canvia'l!
-        const SHEET_ID = '1a4y6_jE1N60BH5nJDVXgsaMPvM5ocYl-WHVSyl0F48w'; // L'ID del teu Google Sheet
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcPeHdbwQfsog35QDZPRftk3HGf2r0xFjGLO8PWZmiBaDLUIbicoir3QCZGNNTLa7f-Q/exec';
+        const SHEET_ID = '1a4y6_jE1N60BH5nJDVXGsaMPvM5ocYl-WHVSyl0F48w';
 
-        let appData = {}; // Objecte per emmagatzemar les dades rebudes del Google Sheet
+        let appData = {};
 
         // Referències als elements del DOM
         const cursSelect = document.getElementById('curs-select');
@@ -259,6 +258,18 @@
             modal.style.display = 'none';
         }
 
+        // Funció per formatar la data de YYYY-MM-DD a DD/MM/YYYY
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const [year, month, day] = dateString.split('-');
+            return `${day}/${month}/${year}`;
+        }
+
+        // Funció per ordenar les anotacions per data de forma descendent
+        function sortAnotacionsByDate(anotacions) {
+            return anotacions.sort((a, b) => new Date(b.data) - new Date(a.data));
+        }
+
         // === Crides a la API de Google Apps Script ===
         async function fetchSheetData() {
             showLoading();
@@ -282,7 +293,7 @@
             try {
                 const response = await fetch(SCRIPT_URL, {
                     method: 'POST',
-                    mode: 'no-cors', // Necessari per a Google Apps Script
+                    mode: 'no-cors',
                     cache: 'no-cache',
                     headers: {
                         'Content-Type': 'application/json'
@@ -290,8 +301,6 @@
                     body: JSON.stringify({ sheetId: SHEET_ID, record })
                 });
 
-                // Per a Google Apps Script, no podem llegir la resposta amb CORS
-                // Sols podem comprovar que la crida es va fer amb èxit.
                 console.log('Dades enviades. Esperant que el script processi la petició.');
                 
             } catch (error) {
@@ -392,12 +401,15 @@
                     </tr>
                 `;
             } else {
-                anotacions.forEach(anotacio => {
+                // Ordenar les anotacions per data de forma descendent
+                const sortedAnotacions = sortAnotacionsByDate(anotacions);
+
+                sortedAnotacions.forEach(anotacio => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${anotacio.data}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 w-32">${formatDate(anotacio.data)}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${anotacio.tipus}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${anotacio.anotacio}</td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${anotacio.anotacio}</td>
                     `;
                     anotacionsTableBody.appendChild(row);
                 });
@@ -509,15 +521,17 @@
         anotacioForm.addEventListener('submit', (e) => {
             e.preventDefault();
 
+            // Obtenim els valors, tenint en compte si s'està creant un nou element
             const curs = formCursSelect.value === 'new-option' ? newCursInput.value : formCursSelect.value;
             const ensenyament = formEnsenyamentSelect.value === 'new-option' ? newEnsenyamentInput.value : formEnsenyamentSelect.value;
             const alumne = formAlumneSelect.value === 'new-option' ? newAlumneInput.value : formAlumneSelect.value;
             const data = dataInput.value;
             const tipus = tipusSelect.value;
             const anotacio = anotacioTextarea.value;
-
+            
+            // Validació personalitzada
             if (!curs || !ensenyament || !alumne || !data || !tipus || !anotacio) {
-                alert('Tots els camps són obligatoris.');
+                alert('Tots els camps són obligatoris. Revisa que les dades introduïdes o seleccionades siguin completes.');
                 return;
             }
 
@@ -527,7 +541,7 @@
                 <p><strong>Curs:</strong> ${curs}</p>
                 <p><strong>Ensenyament:</strong> ${ensenyament}</p>
                 <p><strong>Alumne:</strong> ${alumne}</p>
-                <p><strong>Data:</strong> ${data}</p>
+                <p><strong>Data:</strong> ${formatDate(data)}</p>
                 <p><strong>Tipus:</strong> ${tipus}</p>
                 <p><strong>Anotació:</strong> ${anotacio}</p>
             `;
@@ -555,13 +569,27 @@
             await init();
 
             cursSelect.value = dataForConfirmation.curs;
-            await new Promise(resolve => setTimeout(resolve, 100)); // Espera un moment per assegurar que el DOM s'ha actualitzat
-            ensenyamentSelect.value = dataForConfirmation.ensenyament;
-            await new Promise(resolve => setTimeout(resolve, 100));
-            alumneSelect.value = dataForConfirmation.alumne;
             
-            const anotacions = appData[dataForConfirmation.curs][dataForConfirmation.ensenyament][dataForConfirmation.alumne];
-            renderTable(anotacions);
+            const selectedCurs = dataForConfirmation.curs;
+            const selectedEnsenyament = dataForConfirmation.ensenyament;
+            const selectedAlumne = dataForConfirmation.alumne;
+            
+            loadEnsenyaments(selectedCurs, ensenyamentSelect);
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            ensenyamentSelect.value = selectedEnsenyament;
+            
+            loadAlumnes(selectedCurs, selectedEnsenyament, alumneSelect);
+            
+            await new Promise(resolve => setTimeout(resolve, 100));
+            alumneSelect.value = selectedAlumne;
+            
+            if (appData[selectedCurs] && appData[selectedCurs][selectedEnsenyament] && appData[selectedCurs][selectedEnsenyament][selectedAlumne]) {
+                const anotacions = appData[selectedCurs][selectedEnsenyament][selectedAlumne];
+                renderTable(anotacions);
+            } else {
+                renderTable([]);
+            }
         });
     </script>
 </body>
