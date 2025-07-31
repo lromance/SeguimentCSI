@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seguiment d'Alumnes CFA La Pau</title>
+    <title>Seguiment d'Alumnes CFA La Pau 2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -203,6 +203,7 @@
 
     <script>
         // === CONFIGURACIÓ ===
+        // IMPORTANT: Has de substituir aquesta URL per la URL de la nova implementació del teu script com a aplicació web.
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwcPeHdbwQfsog35QDZPRftk3HGf2r0xFjGLO8PWZmiBaDLUIbicoir3QCZGNNTLa7f-Q/exec';
         const SHEET_ID = '1a4y6_jE1N60BH5nJDVXGsaMPvM5ocYl-WHVSyl0F48w';
 
@@ -418,6 +419,10 @@
         }
 
         async function init() {
+            if (SCRIPT_URL === 'AQUÍ_POSA_LA_TEVA_NOVA_URL') {
+                alert('Si us plau, actualitza la constant SCRIPT_URL amb la nova URL del teu script de Google Apps abans de continuar.');
+                return;
+            }
             await fetchSheetData();
             if (Object.keys(appData).length > 0) {
                 loadCursos(cursSelect);
