@@ -245,8 +245,7 @@
                 <div class="form-group">
                     <label for="cursSelect">Curs Acadèmic:</label>
                     <select id="cursSelect">
-                        <option value="2025-26">2025-26</option>
-                        <option value="2026-27">2026-27</option>
+                        <!-- Options will be dynamically populated -->
                     </select>
                 </div>
 
@@ -389,7 +388,8 @@
         const recordsTableBody = document.getElementById('recordsTableBody');
         const confirmationModal = document.getElementById('confirmationModal');
         const confirmationDetails = document.getElementById('confirmationDetails');
-        
+        const messageContainer = document.getElementById('messageContainer');
+
         // Elements del formulari
         const formCurs = document.getElementById('formCurs');
         const formEnsenyament = document.getElementById('formEnsenyament');
@@ -397,6 +397,8 @@
         const newCurs = document.getElementById('newCurs');
         const newEnsenyament = document.getElementById('newEnsenyament');
         const newAlumne = document.getElementById('newAlumne');
+        const addRecordBtn = document.getElementById('addRecordBtn');
+        const backToStartBtn = document.getElementById('backToStartBtn');
 
         // Inicialització
         document.addEventListener('DOMContentLoaded', function() {
@@ -415,10 +417,10 @@
             ensenyamentSelect.addEventListener('change', onEnsenyamentChange);
             alumneSelect.addEventListener('change', onAlumneChange);
             loadStudentBtn.addEventListener('click', loadStudentInfo);
-            document.getElementById('addRecordBtn').addEventListener('click', showConfirmation);
+            addRecordBtn.addEventListener('click', showConfirmation);
             document.getElementById('confirmAddBtn').addEventListener('click', confirmAddRecord);
             document.getElementById('cancelAddBtn').addEventListener('click', hideConfirmation);
-            document.getElementById('backToStartBtn').addEventListener('click', backToStart);
+            backToStartBtn.addEventListener('click', backToStart);
             
             // Event listeners per al formulari
             formCurs.addEventListener('change', onFormCursChange);
@@ -431,41 +433,32 @@
         async function loadData() {
             try {
                 showLoading('Carregant dades...');
-                console.log('Intentant carregar dades des de:', SCRIPT_URL);
+                const url = `${SCRIPT_URL}?action=read&sheetId=${SHEET_ID}&sheetName=${FULL}`;
                 
-                // Primer intentar amb JSONP
-                try {
-                    const data = await makeJSONPRequest({
-                        action: 'read',
-                        sheetId: SHEET_ID,
-                        sheetName: FULL
+                const data = await makeJSONPRequest(url);
+
+                if (data && data.success) {
+                    allData = data.data || [];
+                    console.log('Dades carregades correctament:', allData.length, 'registres');
+                    
+                    // Actualitzar la llista de cursos
+                    const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
+                    cursSelect.innerHTML = '<option value="">Selecciona curs</option>';
+                    cursos.forEach(curs => {
+                        const option = document.createElement('option');
+                        option.value = curs;
+                        option.textContent = curs;
+                        cursSelect.appendChild(option);
                     });
-                    
-                    if (data && data.success) {
-                        allData = data.data || [];
-                        console.log('Dades carregades correctament:', allData.length, 'registres');
-                        populateEnsenyaments();
-                        return;
-                    } else {
-                        throw new Error(data ? data.message : 'Resposta invàlida del servidor');
-                    }
-                } catch (jsonpError) {
-                    console.warn('JSONP ha fallat, provant fetch normal:', jsonpError);
-                    
-                    // Fallback amb fetch normal
-                    const url = `${SCRIPT_URL}?action=read&sheetId=${SHEET_ID}&sheetName=${FULL}`;
-                    const response = await fetch(url);
-                    const data = await response.json();
-                    
-                    if (data.success) {
-                        allData = data.data || [];
-                        console.log('Dades carregades amb fetch:', allData.length, 'registres');
-                        populateEnsenyaments();
-                    } else {
-                        throw new Error(data.message || 'Error desconegut');
-                    }
+
+                    // Deshabilitar el select d'ensenyament i alumne fins que no es triï un curs
+                    ensenyamentSelect.disabled = true;
+                    alumneSelect.disabled = true;
+
+                    populateEnsenyaments();
+                } else {
+                    throw new Error(data ? data.message : 'Resposta invàlida del servidor');
                 }
-                
             } catch (error) {
                 console.error('Error carregant dades:', error);
                 showError('Error de connexió: ' + error.message + '. Verifica que l\'script de Google Apps Script estigui desplegat correctament.');
@@ -473,11 +466,21 @@
                 // Dades de prova per debug
                 console.log('Carregant dades de prova...');
                 allData = [
-                    ['2025-26', 'Informàtica', 'Joan Pérez', '15/01/2025', 'acadèmic', 'Bon rendiment'],
-                    ['2025-26', 'Informàtica', 'Maria García', '14/01/2025', 'social', 'Integració correcta'],
-                    ['2026-27', 'Administració', 'Pere Martí', '13/01/2025', 'absentisme', 'Faltes recurrents']
+                    { "Curs": "2025-26", "Ensenyament": "Informàtica", "Alumne": "Joan Pérez", "Data": "2025-01-15T10:00:00.000Z", "Tipus": "acadèmic", "Anotació": "Bon rendiment" },
+                    { "Curs": "2025-26", "Ensenyament": "Informàtica", "Alumne": "Maria García", "Data": "2025-01-14T11:00:00.000Z", "Tipus": "social", "Anotació": "Integració correcta" },
+                    { "Curs": "2025-26", "Ensenyament": "Competic 1", "Alumne": "Doe, Jhon", "Data": "2025-07-30T22:00:00.000Z", "Tipus": "Baixa", "Anotació": "blblba" },
+                    { "Curs": "2026-27", "Ensenyament": "Administració", "Alumne": "Pere Martí", "Data": "2025-01-13T12:00:00.000Z", "Tipus": "absentisme", "Anotació": "Faltes recurrents" }
                 ];
-                populateEnsenyaments();
+                
+                const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
+                cursSelect.innerHTML = '<option value="">Selecciona curs</option>';
+                cursos.forEach(curs => {
+                    const option = document.createElement('option');
+                    option.value = curs;
+                    option.textContent = curs;
+                    cursSelect.appendChild(option);
+                });
+
                 showError('AVÍS: S\'estan mostrant dades de prova. Verifica la connexió al Google Sheets.');
             } finally {
                 hideLoading();
@@ -485,7 +488,7 @@
         }
 
         // Funció per fer peticions JSONP (evita problemes de CORS)
-        function makeJSONPRequest(params) {
+        function makeJSONPRequest(url) {
             return new Promise((resolve, reject) => {
                 const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
                 let script = null;
@@ -507,18 +510,11 @@
                 try {
                     // Crear script element
                     script = document.createElement('script');
-                    const url = new URL(SCRIPT_URL);
+                    const finalUrl = new URL(url);
+                    finalUrl.searchParams.append('callback', callbackName);
                     
-                    // Afegir paràmetres
-                    Object.keys(params).forEach(key => {
-                        if (params[key] !== null && params[key] !== undefined) {
-                            url.searchParams.append(key, params[key]);
-                        }
-                    });
-                    url.searchParams.append('callback', callbackName);
-                    
-                    console.log('JSONP URL:', url.toString());
-                    script.src = url.toString();
+                    console.log('JSONP URL:', finalUrl.toString());
+                    script.src = finalUrl.toString();
                     
                     // Crear callback global
                     window[callbackName] = function(data) {
@@ -561,9 +557,10 @@
 
         function populateEnsenyaments() {
             const curs = cursSelect.value;
+            // Corregit: Ara usem `row.Curs` i `row.Ensenyament`
             const ensenyaments = [...new Set(allData
-                .filter(row => row[0] === curs) // Assumint que la columna 0 és el curs
-                .map(row => row[1])) // Assumint que la columna 1 és l'ensenyament
+                .filter(row => row.Curs === curs)
+                .map(row => row.Ensenyament))
             ].filter(Boolean).sort();
 
             ensenyamentSelect.innerHTML = '<option value="">Selecciona ensenyament</option>';
@@ -592,10 +589,10 @@
                 resetAlumnes();
                 return;
             }
-
+            // Corregit: Ara usem `row.Curs`, `row.Ensenyament` i `row.Alumne`
             const alumnes = [...new Set(allData
-                .filter(row => row[0] === curs && row[1] === ensenyament)
-                .map(row => row[2])) // Assumint que la columna 2 és l'alumne
+                .filter(row => row.Curs === curs && row.Ensenyament === ensenyament)
+                .map(row => row.Alumne))
             ].filter(Boolean).sort();
 
             alumneSelect.innerHTML = '<option value="">Selecciona alumne</option>';
@@ -613,7 +610,6 @@
             currentSelection.alumne = alumneSelect.value;
             loadStudentBtn.disabled = !currentSelection.alumne;
             
-            // No carregar automàticament la informació - esperar que l'usuari cliqui el botó
             resetStudentInfo();
         }
 
@@ -628,16 +624,17 @@
         }
 
         function loadStudentInfo() {
+            // Corregit: Filtrem per propietats d'objecte
             const studentRecords = allData.filter(row => 
-                row[0] === currentSelection.curs &&
-                row[1] === currentSelection.ensenyament &&
-                row[2] === currentSelection.alumne
+                row.Curs === currentSelection.curs &&
+                row.Ensenyament === currentSelection.ensenyament &&
+                row.Alumne === currentSelection.alumne
             );
 
-            // Ordenar per data (assumint que la columna 3 és la data)
+            // Ordenar per data
             studentRecords.sort((a, b) => {
-                const dateA = parseDate(a[3]);
-                const dateB = parseDate(b[3]);
+                const dateA = parseDate(a.Data);
+                const dateB = parseDate(b.Data);
                 return dateB - dateA; // Més recent primer
             });
 
@@ -652,10 +649,11 @@
             } else {
                 studentRecords.forEach(record => {
                     const row = document.createElement('tr');
+                    // Corregit: Accedim a les dades per la seva propietat
                     row.innerHTML = `
-                        <td>${formatDate(record[3])}</td>
-                        <td><span class="tipo-badge tipo-${record[4]?.toLowerCase().replace('è', 'e').replace('ó', 'o') || 'academic'}">${record[4] || 'N/A'}</span></td>
-                        <td>${record[5] || 'Sense anotació'}</td>
+                        <td>${formatDate(record.Data)}</td>
+                        <td><span class="tipo-badge tipo-${record.Tipus?.toLowerCase().replace('è', 'e').replace('ó', 'o') || 'academic'}">${record.Tipus || 'N/A'}</span></td>
+                        <td>${record.Anotació || 'Sense anotació'}</td>
                     `;
                     recordsTableBody.appendChild(row);
                 });
@@ -681,7 +679,8 @@
         }
         
         function populateFormCursos() {
-            const cursos = [...new Set(allData.map(row => row[0]))].filter(Boolean).sort();
+            // Corregit: usem `row.Curs`
+            const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
             formCurs.innerHTML = '<option value="">Selecciona curs</option>';
             cursos.forEach(curs => {
                 const option = document.createElement('option');
@@ -698,9 +697,10 @@
                 return;
             }
             
+            // Corregit: usem `row.Curs` i `row.Ensenyament`
             const ensenyaments = [...new Set(allData
-                .filter(row => row[0] === selectedCurs)
-                .map(row => row[1]))
+                .filter(row => row.Curs === selectedCurs)
+                .map(row => row.Ensenyament))
             ].filter(Boolean).sort();
             
             formEnsenyament.innerHTML = '<option value="">Selecciona ensenyament</option>';
@@ -721,9 +721,10 @@
                 return;
             }
             
+            // Corregit: usem `row.Curs`, `row.Ensenyament` i `row.Alumne`
             const alumnes = [...new Set(allData
-                .filter(row => row[0] === selectedCurs && row[1] === selectedEnsenyament)
-                .map(row => row[2]))
+                .filter(row => row.Curs === selectedCurs && row.Ensenyament === selectedEnsenyament)
+                .map(row => row.Alumne))
             ].filter(Boolean).sort();
             
             formAlumne.innerHTML = '<option value="">Selecciona alumne</option>';
@@ -770,11 +771,8 @@
 
         function parseDate(dateStr) {
             if (!dateStr) return new Date(0);
-            const parts = dateStr.split('/');
-            if (parts.length === 3) {
-                return new Date(parts[2], parts[1] - 1, parts[0]);
-            }
-            return new Date(dateStr);
+            const date = new Date(dateStr);
+            return isNaN(date.getTime()) ? new Date(0) : date;
         }
 
         function formatDate(dateStr) {
@@ -798,151 +796,151 @@
                 return;
             }
 
-            const formattedDate = new Date(date).toLocaleDateString('ca-ES');
-            
-            confirmationDetails.innerHTML = `
-                <div style="text-align: left; margin: 20px 0;">
-                    <p><strong>Curs:</strong> ${cursValue}</p>
-                    <p><strong>Ensenyament:</strong> ${ensenyamentValue}</p>
-                    <p><strong>Alumne:</strong> ${alumneValue}</p>
-                    <p><strong>Data:</strong> ${formattedDate}</p>
-                    <p><strong>Tipus:</strong> ${type}</p>
-                    <p><strong>Anotació:</strong> ${note}</p>
-                </div>
+            const confirmationHTML = `
+                <p><strong>Curs:</strong> ${cursValue}</p>
+                <p><strong>Ensenyament:</strong> ${ensenyamentValue}</p>
+                <p><strong>Alumne:</strong> ${alumneValue}</p>
+                <p><strong>Data:</strong> ${formatDate(date)}</p>
+                <p><strong>Tipus:</strong> <span class="tipo-badge tipo-${type?.toLowerCase().replace('è', 'e').replace('ó', 'o')}">${type}</span></p>
+                <p><strong>Anotació:</strong> ${note}</p>
             `;
-
+            confirmationDetails.innerHTML = confirmationHTML;
             confirmationModal.classList.remove('hidden');
+        }
+
+        async function confirmAddRecord() {
+            hideConfirmation();
+            showLoading('Afegint anotació...');
+
+            // Obtenir valors del formulari (prioritzar nous valors)
+            const cursValue = newCurs.value.trim() || formCurs.value;
+            const ensenyamentValue = newEnsenyament.value.trim() || formEnsenyament.value;
+            const alumneValue = newAlumne.value.trim() || formAlumne.value;
+            const date = document.getElementById('newRecordDate').value;
+            const type = document.getElementById('newRecordType').value;
+            const note = document.getElementById('newRecordNote').value;
+
+            const newRecord = {
+                'Curs': cursValue,
+                'Ensenyament': ensenyamentValue,
+                'Alumne': alumneValue,
+                'Data': new Date(date).toISOString(),
+                'Tipus': type,
+                'Anotació': note
+            };
+
+            const params = new URLSearchParams();
+            params.append('action', 'append');
+            params.append('sheetId', SHEET_ID);
+            params.append('sheetName', FULL);
+            params.append('data', JSON.stringify(newRecord));
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: params
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess('Anotació afegida correctament!');
+                    // Recarregar les dades per actualitzar la vista
+                    loadData();
+                    // Netejar el formulari
+                    document.getElementById('newRecordNote').value = '';
+                    document.getElementById('newRecordType').value = '';
+                    setTodayDate();
+                } else {
+                    throw new Error(result.message || 'Error desconegut al servidor.');
+                }
+            } catch (error) {
+                console.error('Error afegint anotació:', error);
+                showError('Error afegint anotació: ' + error.message);
+            } finally {
+                hideLoading();
+            }
         }
 
         function hideConfirmation() {
             confirmationModal.classList.add('hidden');
         }
 
-        async function confirmAddRecord() {
-            try {
-                showLoading('Afegint registre...');
-                
-                const date = document.getElementById('newRecordDate').value;
-                const type = document.getElementById('newRecordType').value;
-                const note = document.getElementById('newRecordNote').value;
-                
-                // Obtenir valors del formulari
-                const cursValue = newCurs.value.trim() || formCurs.value;
-                const ensenyamentValue = newEnsenyament.value.trim() || formEnsenyament.value;
-                const alumneValue = newAlumne.value.trim() || formAlumne.value;
-                
-                const formattedDate = new Date(date).toLocaleDateString('ca-ES');
-                
-                console.log('Afegint registre:', {
-                    curs: cursValue,
-                    ensenyament: ensenyamentValue,
-                    alumne: alumneValue,
-                    data: formattedDate,
-                    tipus: type,
-                    anotacio: note
-                });
-                
-                let result;
-                try {
-                    result = await makeJSONPRequest({
-                        action: 'write',
-                        sheetId: SHEET_ID,
-                        sheetName: FULL,
-                        curs: cursValue,
-                        ensenyament: ensenyamentValue,
-                        alumne: alumneValue,
-                        data: formattedDate,
-                        tipus: type,
-                        anotacio: note
-                    });
-                } catch (jsonpError) {
-                    console.warn('JSONP write ha fallat, provant fetch:', jsonpError);
-                    
-                    // Fallback amb fetch
-                    const params = new URLSearchParams({
-                        action: 'write',
-                        sheetId: SHEET_ID,
-                        sheetName: FULL,
-                        curs: cursValue,
-                        ensenyament: ensenyamentValue,
-                        alumne: alumneValue,
-                        data: formattedDate,
-                        tipus: type,
-                        anotacio: note
-                    });
-                    
-                    const response = await fetch(`${SCRIPT_URL}?${params.toString()}`);
-                    result = await response.json();
-                }
-                
-                if (result && result.success) {
-                    showSuccess('Registre afegit correctament!');
-                    hideConfirmation();
-                    clearForm();
-                    
-                    // Actualitzar selecció actual amb els nous valors
-                    currentSelection.curs = cursValue;
-                    currentSelection.ensenyament = ensenyamentValue;
-                    currentSelection.alumne = alumneValue;
-                    
-                    // Recarregar dades i mostrar informació actualitzada
-                    await loadData();
-                    
-                    // Actualitzar selectors principals
-                    cursSelect.value = cursValue;
-                    populateEnsenyaments();
-                    ensenyamentSelect.value = ensenyamentValue;
-                    populateAlumnes();
-                    alumneSelect.value = alumneValue;
-                    
-                    // Mostrar informació actualitzada de l'alumne
-                    loadStudentInfo();
-                } else {
-                    showError('Error afegint el registre: ' + (result ? result.message : 'Resposta invàlida'));
-                }
-            } catch (error) {
-                console.error('Error afegint registre:', error);
-                showError('Error de connexió: ' + error.message);
-            } finally {
-                hideLoading();
-            }
-        }
-
-        function clearForm() {
-            document.getElementById('newRecordDate').value = new Date().toISOString().split('T')[0];
-            document.getElementById('newRecordType').value = '';
-            document.getElementById('newRecordNote').value = '';
-            
-            // No netejar els selectors del formulari per mantenir el context
-            newCurs.value = '';
-            newEnsenyament.value = '';
-            newAlumne.value = '';
-        }
-
         function backToStart() {
-            cursSelect.value = '2025-26';
-            resetAlumnes();
+            // Netejar seleccions
+            cursSelect.value = '';
+            ensenyamentSelect.value = '';
+            alumneSelect.value = '';
+
+            // Resetear els dropdowns d'ensenyament i alumne
+            ensenyamentSelect.innerHTML = '<option value="">Selecciona primer un curs</option>';
+            ensenyamentSelect.disabled = true;
+            alumneSelect.innerHTML = '<option value="">Selecciona primer un ensenyament</option>';
+            alumneSelect.disabled = true;
+            loadStudentBtn.disabled = true;
+
+            // Amagar la secció de l'alumne
             resetStudentInfo();
-            clearForm();
-            currentSelection = { curs: '', ensenyament: '', alumne: '' };
-            populateEnsenyaments();
         }
 
         function showLoading(message) {
-            // Implementar loading visual si es necessari
-            console.log(message);
+            let loadingElement = document.getElementById('loadingMessage');
+            if (!loadingElement) {
+                loadingElement = document.createElement('div');
+                loadingElement.id = 'loadingMessage';
+                loadingElement.style = "display: flex; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 2000; font-size: 1.2em; color: #1e3c72;";
+                document.body.appendChild(loadingElement);
+            }
+            loadingElement.innerHTML = `<div class="loading"></div><span>${message}</span>`;
+            loadingElement.classList.remove('hidden');
         }
 
         function hideLoading() {
-            // Amagar loading
+            const loadingElement = document.getElementById('loadingMessage');
+            if (loadingElement) {
+                loadingElement.classList.add('hidden');
+            }
         }
 
         function showError(message) {
-            alert('Error: ' + message);
+            // Utilitzar un element persistent per mostrar errors
+            let errorElement = document.getElementById('errorMessage');
+            if (!errorElement) {
+                errorElement = document.createElement('div');
+                errorElement.id = 'errorMessage';
+                errorElement.className = 'error';
+                errorElement.style.position = 'fixed';
+                errorElement.style.bottom = '20px';
+                errorElement.style.left = '50%';
+                errorElement.style.transform = 'translateX(-50%)';
+                errorElement.style.zIndex = '3000';
+                document.body.appendChild(errorElement);
+            }
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+            setTimeout(() => {
+                errorElement.classList.add('hidden');
+            }, 5000);
         }
 
         function showSuccess(message) {
-            alert('Èxit: ' + message);
+             // Utilitzar un element persistent per mostrar èxits
+            let successElement = document.getElementById('successMessage');
+            if (!successElement) {
+                successElement = document.createElement('div');
+                successElement.id = 'successMessage';
+                successElement.className = 'success';
+                successElement.style.position = 'fixed';
+                successElement.style.bottom = '20px';
+                successElement.style.left = '50%';
+                successElement.style.transform = 'translateX(-50%)';
+                successElement.style.zIndex = '3000';
+                document.body.appendChild(successElement);
+            }
+            successElement.textContent = message;
+            successElement.classList.remove('hidden');
+            setTimeout(() => {
+                successElement.classList.add('hidden');
+            }, 5000);
         }
     </script>
 </body>
