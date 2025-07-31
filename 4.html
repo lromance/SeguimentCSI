@@ -144,11 +144,11 @@
             text-transform: uppercase;
         }
 
-        .tipo-academic { background: #e3f2fd; color: #1976d2; }
+        .tipo-acadèmic { background: #e3f2fd; color: #1976d2; }
         .tipo-social { background: #f3e5f5; color: #7b1fa2; }
         .tipo-absentisme { background: #fff3e0; color: #f57c00; }
         .tipo-baixa { background: #ffebee; color: #d32f2f; }
-        .tipo-derivacio { background: #e8f5e8; color: #388e3c; }
+        .tipo-derivació { background: #e8f5e8; color: #388e3c; }
 
         .new-record-form {
             background: #fff;
@@ -395,6 +395,7 @@
 
     <script>
         // Configuració de l'API de Google Apps Script
+        // NOTE: URL del script actualitzada a la versió proporcionada per l'usuari
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGCVet2879gYZ3iLsvKiIQB0FuDR6sF8gF-H_QPS8pRuUGjwuhXtdL4LpQStyLjvx7/exec';
         const SHEET_ID = '1FWhKB7yu3rPFHMI8_Vzlqd1YzE68x86ZmuuV6Bbw55w';
         const FULL = 'Taula';
@@ -473,7 +474,16 @@
                 const data = await makeJSONPRequest(url);
 
                 if (data && data.success) {
-                    allData = data.data || [];
+                    // Les dades retornades ja tenen les capçaleres com a primera fila
+                    const headers = data.data.shift();
+                    allData = data.data.map(row => {
+                        let obj = {};
+                        headers.forEach((header, i) => {
+                            obj[header] = row[i];
+                        });
+                        return obj;
+                    });
+                    
                     console.log('Dades carregades correctament:', allData.length, 'registres');
                     
                     // Actualitza la llista de cursos amb les dades reals
@@ -494,25 +504,7 @@
                 }
             } catch (error) {
                 console.error('Error carregant dades:', error);
-                // Si hi ha un error, mostrem dades de prova per depurar
-                showError('Error de connexió: ' + error.message + '. S\'estan mostrant dades de prova.');
-                
-                // Dades de prova per debug
-                allData = [
-                    { "Curs": "2025-26", "Ensenyament": "Informàtica", "Alumne": "Joan Pérez", "Data": "2025-01-15T10:00:00.000Z", "Tipus": "acadèmic", "Anotació": "Bon rendiment" },
-                    { "Curs": "2025-26", "Ensenyament": "Informàtica", "Alumne": "Maria García", "Data": "2025-01-14T11:00:00.000Z", "Tipus": "social", "Anotació": "Integració correcta" },
-                    { "Curs": "2025-26", "Ensenyament": "Competic 1", "Alumne": "Doe, Jhon", "Data": "2025-07-30T22:00:00.000Z", "Tipus": "Baixa", "Anotació": "blblba" },
-                    { "Curs": "2026-27", "Ensenyament": "Administració", "Alumne": "Pere Martí", "Data": "2025-01-13T12:00:00.000Z", "Tipus": "absentisme", "Anotació": "Faltes recurrents" }
-                ];
-                
-                const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
-                cursSelect.innerHTML = '<option value="">Selecciona curs</option>';
-                cursos.forEach(curs => {
-                    const option = document.createElement('option');
-                    option.value = curs;
-                    option.textContent = curs;
-                    cursSelect.appendChild(option);
-                });
+                showError('Error de connexió: ' + error.message + '. Si us plau, comprova la consola del navegador per a més detalls.');
             } finally {
                 hideLoading();
             }
@@ -794,7 +786,15 @@
 
         function formatDate(dateStr) {
             if (!dateStr) return 'N/A';
-            const date = parseDate(dateStr);
+            // Handle ISO format from script
+            let date;
+            if (dateStr.includes('T')) {
+                date = new Date(dateStr);
+            } else {
+                // Handle simple date string
+                const [year, month, day] = dateStr.split('-');
+                date = new Date(year, month - 1, day);
+            }
             return date.toLocaleDateString('ca-ES');
         }
 
@@ -836,26 +836,25 @@
             const date = document.getElementById('newRecordDate').value;
             const type = document.getElementById('newRecordType').value;
             const note = document.getElementById('newRecordNote').value;
-
-            // Preparem les dades per ser enviades com a paràmetres d'URL (mètode JSONP)
-            const dataToSend = {
-                'Curs': cursValue,
-                'Ensenyament': ensenyamentValue,
-                'Alumne': alumneValue,
-                'Data': new Date(date).toISOString(),
-                'Tipus': type,
-                'Anotació': note
-            };
+            
+            // CANVI: Formatem la data a 'dd/mm/aaaa' abans d'enviar-la al script
+            const formattedDate = formatDate(date);
 
             const params = new URLSearchParams();
-            params.append('action', 'append');
+            params.append('action', 'write');
             params.append('sheetId', SHEET_ID);
             params.append('sheetName', FULL);
-            params.append('data', JSON.stringify(dataToSend));
-            
+            params.append('curs', cursValue);
+            params.append('ensenyament', ensenyamentValue);
+            params.append('alumne', alumneValue);
+            params.append('data', formattedDate); // Utilitzem la data formatada aquí
+            params.append('tipus', type);
+            params.append('anotacio', note);
+
+            const url = `${SCRIPT_URL}?${params.toString()}`;
+
             try {
-                // Utilitzem la funció JSONP que ja tenim per enviar les dades
-                const url = `${SCRIPT_URL}?${params.toString()}`;
+                // Utilitzem la funció JSONP per enviar les dades amb un mètode GET
                 const result = await makeJSONPRequest(url);
 
                 if (result.success) {
