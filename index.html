@@ -20,31 +20,8 @@
     <div class="container mx-auto p-4 md:p-8">
         <h1 class="text-4xl font-bold text-center text-blue-800 mb-8">Gestió d'Anotacions d'Alumnes</h1>
 
-        <!-- Initial Configuration Screen -->
-        <div id="config-screen" class="max-w-xl mx-auto bg-white p-8 rounded-xl shadow-lg transition-all duration-300">
-            <h2 class="text-2xl font-semibold mb-4 text-center">Configuració</h2>
-            <p class="text-center text-gray-600 mb-6">
-                Introdueix l'URL del teu script de Google Apps i l'ID de la fulla de càlcul per començar.
-            </p>
-            <div class="space-y-4">
-                <div>
-                    <label for="script-url-input" class="block text-sm font-medium text-gray-700">URL de l'App Script</label>
-                    <input type="text" id="script-url-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3" value="https://script.google.com/macros/s/AKfycbydJaM7SL4FaYb1kXvCBGFIEZcPB0de32Iyh0haWXtxgWFwfE399RD1z3rSKR_4MB3zPg/exec">
-                </div>
-                <div>
-                    <label for="spreadsheet-id-input" class="block text-sm font-medium text-gray-700">ID de la Fulla de Càlcul</label>
-                    <input type="text" id="spreadsheet-id-input" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3" value="1a4y6_jE1N60BH5nJDVXgsaMPvM5ocYl-WHVSyl0F48w">
-                </div>
-                <div class="flex justify-center mt-6">
-                    <button id="load-data-btn" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                        Carregar Dades
-                    </button>
-                </div>
-            </div>
-        </div>
-
         <!-- Loading Indicator -->
-        <div id="loading-indicator" class="hidden flex justify-center items-center h-40">
+        <div id="loading-indicator" class="flex justify-center items-center h-40">
             <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
             <span class="ml-4 text-blue-500 font-semibold text-lg">Carregant dades...</span>
         </div>
@@ -107,10 +84,6 @@
 
     <script>
         // DOM elements references
-        const configScreen = document.getElementById('config-screen');
-        const scriptUrlInput = document.getElementById('script-url-input');
-        const spreadsheetIdInput = document.getElementById('spreadsheet-id-input');
-        const loadDataBtn = document.getElementById('load-data-btn');
         const loadingIndicator = document.getElementById('loading-indicator');
         const dashboard = document.getElementById('dashboard');
 
@@ -124,6 +97,9 @@
         const modalContent = document.getElementById('modal-content');
 
         // Global state
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzYYsAHt_I1v3aGhddU4VNkZXPyGuC587yUykZfiqHpD0_19mWyWFv28Rh1-Fm7jAVq2g/exec';
+        const SPREADSHEET_ID = '1a4y6_jE1N60BH5nJDVXgsaMPvM5ocYl-WHVSyl0F48w';
+
         let allData = [];
         let courses = [];
         let subjects = [];
@@ -206,20 +182,11 @@
 
         /** Loads all data from Google Sheets and initializes the app. */
         async function loadData() {
-            const scriptUrl = scriptUrlInput.value.trim();
-            const spreadsheetId = spreadsheetIdInput.value.trim();
-
-            if (!scriptUrl || !spreadsheetId) {
-                showErrorModal('Si us plau, introdueix l\'URL del script i l\'ID de la fulla de càlcul.');
-                return;
-            }
-
             loadingIndicator.classList.remove('hidden');
-            configScreen.classList.add('hidden');
+            dashboard.classList.add('hidden');
 
             try {
-                // Construct the URL with query parameters for the GET request
-                const getUrl = `${scriptUrl}?spreadsheetId=${spreadsheetId}`;
+                const getUrl = `${SCRIPT_URL}?spreadsheetId=${SPREADSHEET_ID}`;
                 const response = await fetchData(getUrl, 'GET');
                 
                 if (response.status === 'success' && response.data) {
@@ -233,11 +200,9 @@
                     dashboard.classList.remove('hidden');
                 } else {
                     showErrorModal(`Error al carregar les dades: ${response.message || 'Resposta inesperada.'}`);
-                    configScreen.classList.remove('hidden');
                 }
             } catch (error) {
                 showErrorModal(`Ha fallat la connexió: ${error.message}`);
-                configScreen.classList.remove('hidden');
             } finally {
                 loadingIndicator.classList.add('hidden');
             }
@@ -426,6 +391,7 @@
 
             const formData = {
                 action: 'addNote',
+                spreadsheetId: SPREADSHEET_ID,
                 Curs: selectedCourse,
                 Ensenyament: selectedSubject,
                 Alumne: selectedStudent,
@@ -435,8 +401,7 @@
             };
 
             try {
-                const scriptUrl = scriptUrlInput.value.trim();
-                const response = await fetchData(scriptUrl, 'POST', formData);
+                const response = await fetchData(SCRIPT_URL, 'POST', formData);
 
                 if (response.status === 'success') {
                     renderModal(
@@ -458,7 +423,7 @@
         }
 
         // --- Event Listeners ---
-        loadDataBtn.addEventListener('click', loadData);
+        window.addEventListener('load', loadData);
         courseSelect.addEventListener('change', updateSubjects);
         subjectSelect.addEventListener('change', updateStudents);
         studentSelect.addEventListener('change', renderStudentNotes);
