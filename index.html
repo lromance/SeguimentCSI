@@ -204,7 +204,7 @@
     <script>
         // === CONFIGURACIÓ ===
         // IMPORTANT: Has de substituir aquesta URL per la URL de la nova implementació del teu script com a aplicació web.
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydJaM7SL4FaYb1kXvCBGFIEZcPB0de32Iyh0haWXtxgWFwfE399RD1z3rSKR_4MB3zPg/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyZrWo7RWsT8JEOFKPitABXky2NOiKqWBDQ7Z_QTugbG4f4Rh59MV6TUAZwCDJLwARlsQ/exec';
         const SHEET_ID = '1a4y6_jE1N60BH5nJDVXGsaMPvM5ocYl-WHVSyl0F48w';
 
         let appData = {};
@@ -560,56 +560,4 @@
                 <p><strong>Curs:</strong> ${curs}</p>
                 <p><strong>Ensenyament:</strong> ${ensenyament}</p>
                 <p><strong>Alumne:</strong> ${alumne}</p>
-                <p><strong>Data:</strong> ${formatDate(data)}</p>
-                <p><strong>Tipus:</strong> ${tipus}</p>
-                <p><strong>Anotació:</strong> ${anotacio}</p>
-            `;
-
-            hideModal(formModal);
-            showModal(confirmModal);
-        });
-
-        cancelConfirmBtn.addEventListener('click', () => {
-            hideModal(confirmModal);
-            showModal(formModal);
-        });
-
-        finalConfirmBtn.addEventListener('click', async () => {
-            await appendNewRecord(dataForConfirmation);
-
-            alert('Anotació guardada amb èxit!');
-
-            hideModal(confirmModal);
-            anotacioForm.reset();
-            formNewCursContainer.classList.add('hidden');
-            formNewEnsenyamentContainer.classList.add('hidden');
-            formNewAlumneContainer.classList.add('hidden');
-
-            await init();
-
-            cursSelect.value = dataForConfirmation.curs;
-            
-            const selectedCurs = dataForConfirmation.curs;
-            const selectedEnsenyament = dataForConfirmation.ensenyament;
-            const selectedAlumne = dataForConfirmation.alumne;
-            
-            loadEnsenyaments(selectedCurs, ensenyamentSelect);
-            
-            await new Promise(resolve => setTimeout(resolve, 100));
-            ensenyamentSelect.value = selectedEnsenyament;
-            
-            loadAlumnes(selectedCurs, selectedEnsenyament, alumneSelect);
-            
-            await new Promise(resolve => setTimeout(resolve, 100));
-            alumneSelect.value = selectedAlumne;
-            
-            if (appData[selectedCurs] && appData[selectedCurs][selectedEnsenyament] && appData[selectedCurs][selectedEnsenyament][selectedAlumne]) {
-                const anotacions = appData[selectedCurs][selectedEnsenyament][selectedAlumne];
-                renderTable(anotacions);
-            } else {
-                renderTable([]);
-            }
-        });
-    </script>
-</body>
-</html>
+                <p><strong>
