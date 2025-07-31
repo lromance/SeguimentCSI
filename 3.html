@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Seguiment Alumnes CFA La Pau</title>
+    <title>*Seguiment Alumnes CFA La Pau</title>
     <style>
         * {
             margin: 0;
@@ -193,7 +193,22 @@
             color: #333;
         }
 
-        .loading {
+        .loading-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.8);
+            z-index: 2000;
+            font-size: 1.2em;
+            color: #1e3c72;
+        }
+
+        .loading-spinner {
             display: inline-block;
             width: 20px;
             height: 20px;
@@ -210,27 +225,38 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
-        .error {
-            color: #d32f2f;
-            background: #ffebee;
+        .message-container {
+            margin-bottom: 20px;
+        }
+
+        .message {
             padding: 10px;
             border-radius: 5px;
             margin: 10px 0;
+            display: block;
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            border: 1px solid #d32f2f;
         }
 
         .success {
             color: #388e3c;
             background: #e8f5e8;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
+            border: 1px solid #388e3c;
         }
     </style>
 </head>
 <body>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <span id="loadingMessage">Carregant...</span>
+    </div>
+
     <div class="container">
         <div class="header">
             <h1>🎓 CFA La Pau</h1>
@@ -238,6 +264,9 @@
         </div>
 
         <div class="content">
+            <!-- Contenidor per a missatges d'error i èxit -->
+            <div id="messageContainer" class="message-container"></div>
+            
             <!-- Selecció inicial -->
             <div class="form-section">
                 <h2>Selecciona Curs i Ensenyament</h2>
@@ -365,12 +394,12 @@
     </div>
 
     <script>
-        // Configuració
+        // Configuració de l'API de Google Apps Script
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxdCZpf-4HIrw8XKH9unOnXqXBa-EnFDPIepKMLTmo_Cb6mYJcQVcqHuu6Fs_GMCexv/exec';
         const SHEET_ID = '1FWhKB7yu3rPFHMI8_Vzlqd1YzE68x86ZmuuV6Bbw55w';
         const FULL = 'Taula';
 
-        // Variables globals
+        // Variables globals per a les dades i l'estat actual
         let allData = [];
         let currentSelection = {
             curs: '',
@@ -389,6 +418,8 @@
         const confirmationModal = document.getElementById('confirmationModal');
         const confirmationDetails = document.getElementById('confirmationDetails');
         const messageContainer = document.getElementById('messageContainer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingMessage = document.getElementById('loadingMessage');
 
         // Elements del formulari
         const formCurs = document.getElementById('formCurs');
@@ -400,7 +431,7 @@
         const addRecordBtn = document.getElementById('addRecordBtn');
         const backToStartBtn = document.getElementById('backToStartBtn');
 
-        // Inicialització
+        // Inicialització quan la pàgina es carrega
         document.addEventListener('DOMContentLoaded', function() {
             loadData();
             setTodayDate();
@@ -412,6 +443,7 @@
             document.getElementById('newRecordDate').value = today;
         }
 
+        // Configura tots els listeners d'esdeveniments
         function setupEventListeners() {
             cursSelect.addEventListener('change', onCursChange);
             ensenyamentSelect.addEventListener('change', onEnsenyamentChange);
@@ -422,7 +454,6 @@
             document.getElementById('cancelAddBtn').addEventListener('click', hideConfirmation);
             backToStartBtn.addEventListener('click', backToStart);
             
-            // Event listeners per al formulari
             formCurs.addEventListener('change', onFormCursChange);
             formEnsenyament.addEventListener('change', onFormEnsenyamentChange);
             newCurs.addEventListener('input', onNewCursInput);
@@ -430,18 +461,22 @@
             newAlumne.addEventListener('input', onNewAlumneInput);
         }
 
+        // Carrega les dades de l'API de Google Apps Script
         async function loadData() {
+            // Neteja els missatges anteriors
+            clearMessages();
             try {
                 showLoading('Carregant dades...');
                 const url = `${SCRIPT_URL}?action=read&sheetId=${SHEET_ID}&sheetName=${FULL}`;
                 
+                // Utilitzem JSONP per evitar problemes de CORS
                 const data = await makeJSONPRequest(url);
 
                 if (data && data.success) {
                     allData = data.data || [];
                     console.log('Dades carregades correctament:', allData.length, 'registres');
                     
-                    // Actualitzar la llista de cursos
+                    // Actualitza la llista de cursos amb les dades reals
                     const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
                     cursSelect.innerHTML = '<option value="">Selecciona curs</option>';
                     cursos.forEach(curs => {
@@ -451,20 +486,18 @@
                         cursSelect.appendChild(option);
                     });
 
-                    // Deshabilitar el select d'ensenyament i alumne fins que no es triï un curs
                     ensenyamentSelect.disabled = true;
                     alumneSelect.disabled = true;
-
                     populateEnsenyaments();
                 } else {
                     throw new Error(data ? data.message : 'Resposta invàlida del servidor');
                 }
             } catch (error) {
                 console.error('Error carregant dades:', error);
-                showError('Error de connexió: ' + error.message + '. Verifica que l\'script de Google Apps Script estigui desplegat correctament.');
+                // Si hi ha un error, mostrem dades de prova per depurar
+                showError('Error de connexió: ' + error.message + '. S\'estan mostrant dades de prova.');
                 
                 // Dades de prova per debug
-                console.log('Carregant dades de prova...');
                 allData = [
                     { "Curs": "2025-26", "Ensenyament": "Informàtica", "Alumne": "Joan Pérez", "Data": "2025-01-15T10:00:00.000Z", "Tipus": "acadèmic", "Anotació": "Bon rendiment" },
                     { "Curs": "2025-26", "Ensenyament": "Informàtica", "Alumne": "Maria García", "Data": "2025-01-14T11:00:00.000Z", "Tipus": "social", "Anotació": "Integració correcta" },
@@ -480,8 +513,6 @@
                     option.textContent = curs;
                     cursSelect.appendChild(option);
                 });
-
-                showError('AVÍS: S\'estan mostrant dades de prova. Verifica la connexió al Google Sheets.');
             } finally {
                 hideLoading();
             }
@@ -494,7 +525,6 @@
                 let script = null;
                 let timeoutId = null;
                 
-                // Funció de neteja
                 const cleanup = () => {
                     if (script && script.parentNode) {
                         script.parentNode.removeChild(script);
@@ -508,7 +538,6 @@
                 };
                 
                 try {
-                    // Crear script element
                     script = document.createElement('script');
                     const finalUrl = new URL(url);
                     finalUrl.searchParams.append('callback', callbackName);
@@ -516,29 +545,24 @@
                     console.log('JSONP URL:', finalUrl.toString());
                     script.src = finalUrl.toString();
                     
-                    // Crear callback global
                     window[callbackName] = function(data) {
                         cleanup();
                         console.log('JSONP resposta rebuda:', data);
                         resolve(data);
                     };
                     
-                    // Gestionar errors
                     script.onerror = function(error) {
                         cleanup();
                         console.error('Error JSONP script:', error);
                         reject(new Error('Error carregant l\'script JSONP'));
                     };
                     
-                    // Timeout
                     timeoutId = setTimeout(() => {
                         cleanup();
                         reject(new Error('Timeout de la petició JSONP (15s)'));
                     }, 15000);
                     
-                    // Afegir script al DOM
                     document.head.appendChild(script);
-                    
                 } catch (error) {
                     cleanup();
                     reject(error);
@@ -546,6 +570,7 @@
             });
         }
 
+        // Lògica per actualitzar els menús desplegables
         function onCursChange() {
             currentSelection.curs = cursSelect.value;
             currentSelection.ensenyament = '';
@@ -557,7 +582,6 @@
 
         function populateEnsenyaments() {
             const curs = cursSelect.value;
-            // Corregit: Ara usem `row.Curs` i `row.Ensenyament`
             const ensenyaments = [...new Set(allData
                 .filter(row => row.Curs === curs)
                 .map(row => row.Ensenyament))
@@ -582,14 +606,13 @@
         }
 
         function populateAlumnes() {
-            const curs = cursSelect.value;
+            const curs = currentSelection.curs;
             const ensenyament = ensenyamentSelect.value;
             
             if (!ensenyament) {
                 resetAlumnes();
                 return;
             }
-            // Corregit: Ara usem `row.Curs`, `row.Ensenyament` i `row.Alumne`
             const alumnes = [...new Set(allData
                 .filter(row => row.Curs === curs && row.Ensenyament === ensenyament)
                 .map(row => row.Alumne))
@@ -609,7 +632,6 @@
         function onAlumneChange() {
             currentSelection.alumne = alumneSelect.value;
             loadStudentBtn.disabled = !currentSelection.alumne;
-            
             resetStudentInfo();
         }
 
@@ -623,15 +645,15 @@
             studentInfo.classList.add('hidden');
         }
 
+        // Carrega la informació d'un alumne seleccionat
         function loadStudentInfo() {
-            // Corregit: Filtrem per propietats d'objecte
+            clearMessages();
             const studentRecords = allData.filter(row => 
                 row.Curs === currentSelection.curs &&
                 row.Ensenyament === currentSelection.ensenyament &&
                 row.Alumne === currentSelection.alumne
             );
 
-            // Ordenar per data
             studentRecords.sort((a, b) => {
                 const dateA = parseDate(a.Data);
                 const dateB = parseDate(b.Data);
@@ -649,37 +671,33 @@
             } else {
                 studentRecords.forEach(record => {
                     const row = document.createElement('tr');
-                    // Corregit: Accedim a les dades per la seva propietat
+                    const tipoClass = record.Tipus?.toLowerCase().replace('è', 'e').replace('ó', 'o');
                     row.innerHTML = `
                         <td>${formatDate(record.Data)}</td>
-                        <td><span class="tipo-badge tipo-${record.Tipus?.toLowerCase().replace('è', 'e').replace('ó', 'o') || 'academic'}">${record.Tipus || 'N/A'}</span></td>
+                        <td><span class="tipo-badge tipo-${tipoClass}">${record.Tipus || 'N/A'}</span></td>
                         <td>${record.Anotació || 'Sense anotació'}</td>
                     `;
                     recordsTableBody.appendChild(row);
                 });
             }
 
-            // Inicialitzar el formulari amb les dades seleccionades
             initializeForm();
-            
             studentInfo.classList.remove('hidden');
             studentInfo.scrollIntoView({ behavior: 'smooth' });
         }
         
+        // Inicialitza el formulari amb les dades seleccionades
         function initializeForm() {
-            // Poblar el formulari amb les opcions disponibles
             populateFormCursos();
             populateFormEnsenyaments();
             populateFormAlumnes();
             
-            // Preseleccionar les opcions actuals
             formCurs.value = currentSelection.curs;
             formEnsenyament.value = currentSelection.ensenyament;
             formAlumne.value = currentSelection.alumne;
         }
         
         function populateFormCursos() {
-            // Corregit: usem `row.Curs`
             const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
             formCurs.innerHTML = '<option value="">Selecciona curs</option>';
             cursos.forEach(curs => {
@@ -691,13 +709,12 @@
         }
         
         function populateFormEnsenyaments() {
-            const selectedCurs = formCurs.value || newCurs.value;
+            const selectedCurs = newCurs.value.trim() || formCurs.value;
             if (!selectedCurs) {
                 formEnsenyament.innerHTML = '<option value="">Selecciona primer un curs</option>';
                 return;
             }
             
-            // Corregit: usem `row.Curs` i `row.Ensenyament`
             const ensenyaments = [...new Set(allData
                 .filter(row => row.Curs === selectedCurs)
                 .map(row => row.Ensenyament))
@@ -713,15 +730,14 @@
         }
         
         function populateFormAlumnes() {
-            const selectedCurs = formCurs.value || newCurs.value;
-            const selectedEnsenyament = formEnsenyament.value || newEnsenyament.value;
+            const selectedCurs = newCurs.value.trim() || formCurs.value;
+            const selectedEnsenyament = newEnsenyament.value.trim() || formEnsenyament.value;
             
             if (!selectedCurs || !selectedEnsenyament) {
                 formAlumne.innerHTML = '<option value="">Selecciona primer curs i ensenyament</option>';
                 return;
             }
             
-            // Corregit: usem `row.Curs`, `row.Ensenyament` i `row.Alumne`
             const alumnes = [...new Set(allData
                 .filter(row => row.Curs === selectedCurs && row.Ensenyament === selectedEnsenyament)
                 .map(row => row.Alumne))
@@ -769,6 +785,7 @@
             }
         }
 
+        // Funcions auxiliars per a dates i confirmació
         function parseDate(dateStr) {
             if (!dateStr) return new Date(0);
             const date = new Date(dateStr);
@@ -782,11 +799,11 @@
         }
 
         function showConfirmation() {
+            clearMessages();
             const date = document.getElementById('newRecordDate').value;
             const type = document.getElementById('newRecordType').value;
             const note = document.getElementById('newRecordNote').value;
             
-            // Obtenir valors del formulari (prioritzar nous valors)
             const cursValue = newCurs.value.trim() || formCurs.value;
             const ensenyamentValue = newEnsenyament.value.trim() || formEnsenyament.value;
             const alumneValue = newAlumne.value.trim() || formAlumne.value;
@@ -811,8 +828,8 @@
         async function confirmAddRecord() {
             hideConfirmation();
             showLoading('Afegint anotació...');
+            clearMessages();
 
-            // Obtenir valors del formulari (prioritzar nous valors)
             const cursValue = newCurs.value.trim() || formCurs.value;
             const ensenyamentValue = newEnsenyament.value.trim() || formEnsenyament.value;
             const alumneValue = newAlumne.value.trim() || formAlumne.value;
@@ -844,9 +861,7 @@
                 
                 if (result.success) {
                     showSuccess('Anotació afegida correctament!');
-                    // Recarregar les dades per actualitzar la vista
                     loadData();
-                    // Netejar el formulari
                     document.getElementById('newRecordNote').value = '';
                     document.getElementById('newRecordType').value = '';
                     setTodayDate();
@@ -866,81 +881,48 @@
         }
 
         function backToStart() {
-            // Netejar seleccions
             cursSelect.value = '';
             ensenyamentSelect.value = '';
             alumneSelect.value = '';
 
-            // Resetear els dropdowns d'ensenyament i alumne
             ensenyamentSelect.innerHTML = '<option value="">Selecciona primer un curs</option>';
             ensenyamentSelect.disabled = true;
             alumneSelect.innerHTML = '<option value="">Selecciona primer un ensenyament</option>';
             alumneSelect.disabled = true;
             loadStudentBtn.disabled = true;
 
-            // Amagar la secció de l'alumne
             resetStudentInfo();
+            clearMessages();
         }
 
+        // Funcions per mostrar missatges de càrrega, error i èxit
         function showLoading(message) {
-            let loadingElement = document.getElementById('loadingMessage');
-            if (!loadingElement) {
-                loadingElement = document.createElement('div');
-                loadingElement.id = 'loadingMessage';
-                loadingElement.style = "display: flex; align-items: center; justify-content: center; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 2000; font-size: 1.2em; color: #1e3c72;";
-                document.body.appendChild(loadingElement);
-            }
-            loadingElement.innerHTML = `<div class="loading"></div><span>${message}</span>`;
-            loadingElement.classList.remove('hidden');
+            loadingMessage.textContent = message;
+            loadingOverlay.classList.remove('hidden');
         }
 
         function hideLoading() {
-            const loadingElement = document.getElementById('loadingMessage');
-            if (loadingElement) {
-                loadingElement.classList.add('hidden');
-            }
+            loadingOverlay.classList.add('hidden');
+        }
+
+        function clearMessages() {
+            messageContainer.innerHTML = '';
         }
 
         function showError(message) {
-            // Utilitzar un element persistent per mostrar errors
-            let errorElement = document.getElementById('errorMessage');
-            if (!errorElement) {
-                errorElement = document.createElement('div');
-                errorElement.id = 'errorMessage';
-                errorElement.className = 'error';
-                errorElement.style.position = 'fixed';
-                errorElement.style.bottom = '20px';
-                errorElement.style.left = '50%';
-                errorElement.style.transform = 'translateX(-50%)';
-                errorElement.style.zIndex = '3000';
-                document.body.appendChild(errorElement);
-            }
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-            setTimeout(() => {
-                errorElement.classList.add('hidden');
-            }, 5000);
+            clearMessages();
+            const errorElement = document.createElement('div');
+            errorElement.className = 'message error';
+            errorElement.innerHTML = `<strong class="font-bold">Error!</strong> <span class="ml-2">${message}</span>`;
+            messageContainer.appendChild(errorElement);
         }
 
         function showSuccess(message) {
-             // Utilitzar un element persistent per mostrar èxits
-            let successElement = document.getElementById('successMessage');
-            if (!successElement) {
-                successElement = document.createElement('div');
-                successElement.id = 'successMessage';
-                successElement.className = 'success';
-                successElement.style.position = 'fixed';
-                successElement.style.bottom = '20px';
-                successElement.style.left = '50%';
-                successElement.style.transform = 'translateX(-50%)';
-                successElement.style.zIndex = '3000';
-                document.body.appendChild(successElement);
-            }
-            successElement.textContent = message;
-            successElement.classList.remove('hidden');
-            setTimeout(() => {
-                successElement.classList.add('hidden');
-            }, 5000);
+            clearMessages();
+            const successElement = document.createElement('div');
+            successElement.className = 'message success';
+            successElement.innerHTML = `<strong class="font-bold">Èxit!</strong> <span class="ml-2">${message}</span>`;
+            messageContainer.appendChild(successElement);
         }
     </script>
 </body>
