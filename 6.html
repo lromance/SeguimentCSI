@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seguiment Alumnes CFA La Pau</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        /* Estils per a les pestanyes */
+        .tabs {
+            margin-bottom: 20px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #e1e5e9;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .tab-button {
+            background: none;
+            border: none;
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.3s ease, border-bottom 0.3s ease;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab-button:hover {
+            color: #2a5298;
+        }
+
+        .tab-button.active {
+            color: #2a5298;
+            border-bottom: 2px solid #2a5298;
+        }
+
+        .tab-content {
+            padding: 10px 0;
+            animation: fadeIn 0.5s;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Estils existents */
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 5px solid #2a5298;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        select, input[type="text"], input[type="date"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+        }
+
+        button {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(42, 82, 152, 0.3);
+        }
+        
+        #buttonGroup {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .student-info {
+            margin-top: 30px;
+        }
+
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            table-layout: fixed; /* Important for fixed column widths */
+        }
+        
+        .records-table th, .records-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e1e5e9;
+            text-align: left;
+            vertical-align: top;
+            word-wrap: break-word; /* Allows long text to wrap */
+        }
+        
+        .records-table th {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            font-weight: 600;
+        }
+
+        .records-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        /* Mides de les columnes ajustades segons la teva petició */
+        #studentRecordsTable th:nth-child(1), #studentRecordsTable td:nth-child(1) { width: 15%; } /* Data */
+        #studentRecordsTable th:nth-child(2), #studentRecordsTable td:nth-child(2) { width: 15%; } /* Tipus */
+        #studentRecordsTable th:nth-child(3), #studentRecordsTable td:nth-child(3) { width: 70%; } /* Anotació */
+        
+        #allStudentRecordsTable th:nth-child(1), #allStudentRecordsTable td:nth-child(1) { width: 12%; } /* Data */
+        #allStudentRecordsTable th:nth-child(2), #allStudentRecordsTable td:nth-child(2) { width: 15%; } /* Curs */
+        #allStudentRecordsTable th:nth-child(3), #allStudentRecordsTable td:nth-child(3) { width: 18%; } /* Ensenyament */
+        #allStudentRecordsTable th:nth-child(4), #allStudentRecordsTable td:nth-child(4) { width: 15%; } /* Tipus */
+        #allStudentRecordsTable th:nth-child(5), #allStudentRecordsTable td:nth-child(5) { width: 40%; } /* Anotació */
+        
+        #groupRecordsTable th:nth-child(1), #groupRecordsTable td:nth-child(1) { width: 15%; } /* Data */
+        #groupRecordsTable th:nth-child(2), #groupRecordsTable td:nth-child(2) { width: 25%; } /* Alumne */
+        #groupRecordsTable th:nth-child(3), #groupRecordsTable td:nth-child(3) { width: 15%; } /* Tipus */
+        #groupRecordsTable th:nth-child(4), #groupRecordsTable td:nth-child(4) { width: 45%; } /* Anotació */
+
+        .tipo-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .tipo-academic { background: #e3f2fd; color: #1976d2; }
+        .tipo-social { background: #f3e5f5; color: #7b1fa2; }
+        .tipo-absentisme { background: #fff3e0; color: #f57c00; }
+        .tipo-baixa { background: #ffebee; color: #d32f2f; }
+        .tipo-derivacio { background: #e8f5e8; color: #388e3c; }
+        .tipo-tutoria { background: #e0f7fa; color: #00796b; }
+        .tipo-default { background: #e1e5e9; color: #666; }
+
+
+        .new-record-form {
+            background: #fff;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .confirmation-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .loading-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.8);
+            z-index: 2000;
+            font-size: 1.2em;
+            color: #1e3c72;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2a5298;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .message-container {
+            margin-bottom: 20px;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: block;
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            border: 1px solid #d32f2f;
+        }
+
+        .success {
+            color: #388e3c;
+            background: #e8f5e8;
+            border: 1px solid #388e3c;
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <span id="loadingMessage">Carregant...</span>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>🎓 CFA La Pau</h1>
+            <p>Sistema de Seguiment d'Alumnes</p>
+        </div>
+
+        <div class="content">
+            <!-- Contenidor per a missatges d'error i èxit -->
+            <div id="messageContainer" class="message-container"></div>
+            
+            <!-- Interfície de pestanyes -->
+            <div class="tabs">
+                <div class="tab-buttons">
+                    <button class="tab-button active" onclick="showTab('alumne-curs')">Alumne d'un curs</button>
+                    <button class="tab-button" onclick="showTab('alumnes')">Alumnes</button>
+                    <button class="tab-button" onclick="showTab('grups')">Grups</button>
+                </div>
+                
+                <div id="tab-alumne-curs" class="tab-content">
+                    <div class="form-section">
+                        <h2>Selecciona Alumne per Curs i Ensenyament</h2>
+                        <div class="form-group">
+                            <label for="cursSelect">Curs Acadèmic:</label>
+                            <select id="cursSelect">
+                                <!-- Opcions seran poblades dinàmicament -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="ensenyamentSelect">Ensenyament:</label>
+                            <select id="ensenyamentSelect" disabled>
+                                <option value="">Selecciona primer un curs</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alumneSelect">Alumne:</label>
+                            <select id="alumneSelect" disabled>
+                                <option value="">Selecciona primer un ensenyament</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="studentInfo" class="student-info hidden">
+                        <div class="form-section">
+                            <h2 id="studentName">Informació de l'Alumne</h2>
+                            <div id="studentRecordsContainer">
+                                <table class="records-table" id="studentRecordsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Tipus</th>
+                                            <th>Anotació</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="studentRecordsTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-alumnes" class="tab-content hidden">
+                    <div class="form-section">
+                        <h2>Selecciona un Alumne de l'Escola</h2>
+                        <div class="form-group">
+                            <label for="allAlumneSelect">Alumne:</label>
+                            <select id="allAlumneSelect">
+                                <option value="">Selecciona un alumne</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="allStudentRecordsContainer" class="student-info hidden">
+                         <div class="form-section">
+                            <h2 id="allStudentName"></h2>
+                            <table class="records-table" id="allStudentRecordsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Curs</th>
+                                        <th>Ensenyament</th>
+                                        <th>Tipus</th>
+                                        <th>Anotació</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="allStudentRecordsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-grups" class="tab-content hidden">
+                    <div class="form-section">
+                        <h2>Selecciona Grup</h2>
+                        <div class="form-group">
+                            <label for="groupCursSelect">Curs Acadèmic:</label>
+                            <select id="groupCursSelect">
+                                <!-- Opcions seran poblades dinàmicament -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="groupEnsenyamentSelect">Ensenyament:</label>
+                            <select id="groupEnsenyamentSelect" disabled>
+                                <option value="">Selecciona primer un curs</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="groupInfo" class="student-info hidden">
+                        <div class="form-section">
+                            <h2 id="groupName"></h2>
+                            <div id="groupRecordsContainer">
+                                <table class="records-table" id="groupRecordsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Alumne</th>
+                                            <th>Tipus</th>
+                                            <th>Anotació</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="groupRecordsTableBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Formulari per afegir nova anotació (ara fora del quadre de pestanyes) -->
+            <div class="new-record-form">
+                <h3>Afegir Nova Anotació</h3>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="formCurs">Curs:</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="formCurs" style="flex: 1;">
+                                <option value="">Selecciona curs</option>
+                            </select>
+                            <input type="text" id="newCurs" placeholder="Nou curs (ex: 2027-28)" style="flex: 1;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="formEnsenyament">Ensenyament:</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="formEnsenyament" style="flex: 1;">
+                                <option value="">Selecciona ensenyament</option>
+                            </select>
+                            <input type="text" id="newEnsenyament" placeholder="Nou ensenyament" style="flex: 1;">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="formAlumne">Alumne:</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="formAlumne" style="flex: 1;">
+                                <option value="">Selecciona alumne</option>
+                            </select>
+                            <input type="text" id="newAlumne" placeholder="Nou alumne" style="flex: 1;">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="newRecordDate">Data:</label>
+                        <input type="date" id="newRecordDate" required>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="newRecordType">Tipus:</label>
+                        <select id="newRecordType" required>
+                            <option value="">Selecciona tipus</option>
+                            <option value="Acadèmic">Acadèmic</option>
+                            <option value="Social">Social</option>
+                            <option value="Absentisme">Absentisme</option>
+                            <option value="Baixa">Baixa</option>
+                            <option value="Derivació">Derivació</option>
+                            <option value="Tutoria">Tutoria</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="newRecordNote">Anotació:</label>
+                    <textarea id="newRecordNote" rows="3" placeholder="Escriu l'anotació..." required></textarea>
+                </div>
+
+                <button id="addRecordBtn">Afegir Anotació</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmació -->
+    <div id="confirmationModal" class="confirmation-modal hidden">
+        <div class="modal-content">
+            <h3>Confirmar Nova Anotació</h3>
+            <div id="confirmationDetails"></div>
+            <div style="margin-top: 20px;">
+                <button id="confirmAddBtn">Confirmar</button>
+                <button id="cancelAddBtn" style="background: #666;">Cancel·lar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuració de l'API de Google Apps Script
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGCVet2879gYZ3iLsvKiIQB0FuDR6sF8gF-H_QPS8pRuUGjwuhXtdL4LpQStyLjvx7/exec';
+        const SHEET_ID = '1FWhKB7yu3rPFHMI8_Vzlqd1YzE68x86ZmuuV6Bbw55w';
+        const FULL = 'Taula';
+
+        // Variables globals per a les dades i l'estat actual
+        let allData = [];
+        let currentSelection = {
+            curs: '',
+            ensenyament: '',
+            alumne: ''
+        };
+
+        // Elements del DOM per a les pestanyes
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        // Elements del DOM de la pestanya "Alumne d'un curs"
+        const cursSelect = document.getElementById('cursSelect');
+        const ensenyamentSelect = document.getElementById('ensenyamentSelect');
+        const alumneSelect = document.getElementById('alumneSelect');
+        const studentInfo = document.getElementById('studentInfo');
+        const studentName = document.getElementById('studentName');
+        const studentRecordsTableBody = document.getElementById('studentRecordsTableBody');
+
+        // Elements del DOM de la pestanya "Alumnes"
+        const allAlumneSelect = document.getElementById('allAlumneSelect');
+        const allStudentRecordsContainer = document.getElementById('allStudentRecordsContainer');
+        const allStudentName = document.getElementById('allStudentName');
+        const allStudentRecordsTableBody = document.getElementById('allStudentRecordsTableBody');
+
+        // Elements del DOM de la pestanya "Grups"
+        const groupCursSelect = document.getElementById('groupCursSelect');
+        const groupEnsenyamentSelect = document.getElementById('groupEnsenyamentSelect');
+        const groupInfo = document.getElementById('groupInfo');
+        const groupName = document.getElementById('groupName');
+        const groupRecordsTableBody = document.getElementById('groupRecordsTableBody');
+        
+        // Elements del DOM del formulari de nova anotació
+        const formCurs = document.getElementById('formCurs');
+        const formEnsenyament = document.getElementById('formEnsenyament');
+        const formAlumne = document.getElementById('formAlumne');
+        const newCurs = document.getElementById('newCurs');
+        const newEnsenyament = document.getElementById('newEnsenyament');
+        const newAlumne = document.getElementById('newAlumne');
+        const addRecordBtn = document.getElementById('addRecordBtn');
+        const newRecordDate = document.getElementById('newRecordDate');
+        const newRecordType = document.getElementById('newRecordType');
+        const newRecordNote = document.getElementById('newRecordNote');
+        
+        // Elements comuns
+        const confirmationModal = document.getElementById('confirmationModal');
+        const confirmationDetails = document.getElementById('confirmationDetails');
+        const messageContainer = document.getElementById('messageContainer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingMessage = document.getElementById('loadingMessage');
+
+        // Inicialització quan la pàgina es carrega
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            setTodayDate();
+            setupEventListeners();
+        });
+
+        // Funció per mostrar/amagar les pestanyes
+        function showTab(tabId) {
+            tabButtons.forEach(button => button.classList.remove('active'));
+            tabContents.forEach(content => content.classList.add('hidden'));
+
+            document.querySelector(`.tab-button[onclick="showTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            // Reiniciem les seleccions i dades en canviar de pestanya
+            if (tabId === 'alumne-curs') {
+                resetAlumneCursTab();
+            } else if (tabId === 'alumnes') {
+                resetAlumnesTab();
+            } else if (tabId === 'grups') {
+                resetGrupsTab();
+            }
+        }
+        
+        // Restableix la pestanya "Alumne d'un curs"
+        function resetAlumneCursTab() {
+            cursSelect.value = '';
+            ensenyamentSelect.value = '';
+            alumneSelect.value = '';
+            ensenyamentSelect.disabled = true;
+            alumneSelect.disabled = true;
+            studentInfo.classList.add('hidden');
+        }
+
+        // Restableix la pestanya "Alumnes"
+        function resetAlumnesTab() {
+            allAlumneSelect.value = '';
+            allStudentRecordsContainer.classList.add('hidden');
+        }
+
+        // Restableix la pestanya "Grups"
+        function resetGrupsTab() {
+            groupCursSelect.value = '';
+            groupEnsenyamentSelect.value = '';
+            groupEnsenyamentSelect.disabled = true;
+            groupInfo.classList.add('hidden');
+        }
+
+        function setTodayDate() {
+            const today = new Date().toISOString().split('T')[0];
+            newRecordDate.value = today;
+        }
+
+        // Configura tots els listeners d'esdeveniments
+        function setupEventListeners() {
+            // Pestanya "Alumne d'un curs"
+            cursSelect.addEventListener('change', onCursChange);
+            ensenyamentSelect.addEventListener('change', onEnsenyamentChange);
+            alumneSelect.addEventListener('change', loadStudentInfo);
+
+            // Pestanya "Alumnes"
+            allAlumneSelect.addEventListener('change', loadAllStudentRecords);
+
+            // Pestanya "Grups"
+            groupCursSelect.addEventListener('change', onGroupCursChange);
+            groupEnsenyamentSelect.addEventListener('change', onGroupEnsenyamentChange);
+            
+            // Formulari de nova anotació
+            addRecordBtn.addEventListener('click', showConfirmation);
+            document.getElementById('confirmAddBtn').addEventListener('click', confirmAddRecord);
+            document.getElementById('cancelAddBtn').addEventListener('click', hideConfirmation);
+            
+            formCurs.addEventListener('change', onFormCursChange);
+            formEnsenyament.addEventListener('change', onFormEnsenyamentChange);
+            newCurs.addEventListener('input', onNewCursInput);
+            newEnsenyament.addEventListener('input', onNewEnsenyamentInput);
+            newAlumne.addEventListener('input', onNewAlumneInput);
+        }
+
+        // Carrega les dades de l'API de Google Apps Script
+        async function loadData() {
+            clearMessages();
+            try {
+                showLoading('Carregant dades...');
+                const url = `${SCRIPT_URL}?action=read&sheetId=${SHEET_ID}&sheetName=${FULL}`;
+                
+                const data = await makeJSONPRequest(url);
+
+                if (data && data.success) {
+                    const headers = data.data.shift();
+                    allData = data.data.map(row => {
+                        let obj = {};
+                        headers.forEach((header, i) => {
+                            obj[header] = row[i];
+                        });
+                        return obj;
+                    });
+                    
+                    console.log('Dades carregades correctament:', allData.length, 'registres');
+                    
+                    // Omplim els menús desplegables de totes les pestanyes i el formulari
+                    populateMainCursos();
+                    populateAllAlumnes();
+                    populateGroupCursos();
+                    populateFormCursos();
+                } else {
+                    throw new Error(data ? data.message : 'Resposta invàlida del servidor');
+                }
+            } catch (error) {
+                console.error('Error carregant dades:', error);
+                showError('Error de connexió: ' + error.message + '. Si us plau, comprova la consola del navegador per a més detalls.');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function makeJSONPRequest(url) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+                let script = null;
+                let timeoutId = null;
+                
+                const cleanup = () => {
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                    if (window[callbackName]) {
+                        delete window[callbackName];
+                    }
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                };
+                
+                try {
+                    script = document.createElement('script');
+                    const finalUrl = new URL(url);
+                    finalUrl.searchParams.append('callback', callbackName);
+                    
+                    console.log('JSONP URL:', finalUrl.toString());
+                    script.src = finalUrl.toString();
+                    
+                    window[callbackName] = function(data) {
+                        cleanup();
+                        console.log('JSONP resposta rebuda:', data);
+                        resolve(data);
+                    };
+                    
+                    script.onerror = function(error) {
+                        cleanup();
+                        console.error('Error JSONP script:', error);
+                        reject(new Error('Error carregant l\'script JSONP'));
+                    };
+                    
+                    timeoutId = setTimeout(() => {
+                        cleanup();
+                        reject(new Error('Timeout de la petició JSONP (15s)'));
+                    }, 15000);
+                    
+                    document.head.appendChild(script);
+                } catch (error) {
+                    cleanup();
+                    reject(error);
+                }
+            });
+        }
+        
+        // --- Funcions per a la pestanya "Alumne d'un curs" ---
+        function populateMainCursos() {
+            const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
+            cursSelect.innerHTML = '<option value="">Selecciona curs</option>';
+            cursos.forEach(curs => {
+                const option = document.createElement('option');
+                option.value = curs;
+                option.textContent = curs;
+                cursSelect.appendChild(option);
+            });
+        }
+        
+        function onCursChange() {
+            currentSelection.curs = cursSelect.value;
+            currentSelection.ensenyament = '';
+            currentSelection.alumne = '';
+            populateMainEnsenyaments();
+            resetMainAlumnes();
+            studentInfo.classList.add('hidden');
+        }
+
+        function populateMainEnsenyaments() {
+            const curs = cursSelect.value;
+            const ensenyaments = [...new Set(allData
+                .filter(row => row.Curs === curs)
+                .map(row => row.Ensenyament))
+            ].filter(Boolean).sort();
+
+            ensenyamentSelect.innerHTML = '<option value="">Selecciona ensenyament</option>';
+            ensenyaments.forEach(ensenyament => {
+                const option = document.createElement('option');
+                option.value = ensenyament;
+                option.textContent = ensenyament;
+                ensenyamentSelect.appendChild(option);
+            });
+            ensenyamentSelect.disabled = ensenyaments.length === 0;
+        }
+
+        function onEnsenyamentChange() {
+            currentSelection.ensenyament = ensenyamentSelect.value;
+            currentSelection.alumne = '';
+            populateMainAlumnes();
+            studentInfo.classList.add('hidden');
+        }
+
+        function populateMainAlumnes() {
+            const curs = currentSelection.curs;
+            const ensenyament = ensenyamentSelect.value;
+            
+            if (!ensenyament) {
+                resetMainAlumnes();
+                return;
+            }
+            const alumnes = [...new Set(allData
+                .filter(row => row.Curs === curs && row.Ensenyament === ensenyament)
+                .map(row => row.Alumne))
+            ].filter(Boolean).sort();
+
+            alumneSelect.innerHTML = '<option value="">Selecciona alumne</option>';
+            alumnes.forEach(alumne => {
+                const option = document.createElement('option');
+                option.value = alumne;
+                option.textContent = alumne;
+                alumneSelect.appendChild(option);
+            });
+            alumneSelect.disabled = alumnes.length === 0;
+        }
+
+        function resetMainAlumnes() {
+            alumneSelect.innerHTML = '<option value="">Selecciona primer un ensenyament</option>';
+            alumneSelect.disabled = true;
+        }
+        
+        function loadStudentInfo() {
+            clearMessages();
+            const selectedAlumne = alumneSelect.value;
+            const studentRecords = allData.filter(row => 
+                row.Curs === currentSelection.curs &&
+                row.Ensenyament === currentSelection.ensenyament &&
+                row.Alumne === selectedAlumne
+            );
+
+            studentRecords.sort((a, b) => {
+                const dateA = parseDate(a.Data);
+                const dateB = parseDate(b.Data);
+                return dateB - dateA; // Més recent primer
+            });
+
+            studentName.textContent = `${selectedAlumne} - ${currentSelection.ensenyament} (${currentSelection.curs})`;
+            
+            studentRecordsTableBody.innerHTML = '';
+            
+            if (studentRecords.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="3" style="text-align: center; font-style: italic; color: #666;">No hi ha registres per a aquest alumne en aquest grup.</td>`;
+                studentRecordsTableBody.appendChild(row);
+            } else {
+                studentRecords.forEach(record => {
+                    const tipoClass = getTipoClass(record.Tipus);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${formatDate(record.Data)}</td>
+                        <td><span class="tipo-badge ${tipoClass}">${record.Tipus || 'N/A'}</span></td>
+                        <td>${record.Anotació || 'Sense anotació'}</td>
+                    `;
+                    studentRecordsTableBody.appendChild(row);
+                });
+            }
+
+            studentInfo.classList.remove('hidden');
+        }
+
+        // --- Funcions per a la pestanya "Alumnes" ---
+        function populateAllAlumnes() {
+            const allAlumnes = [...new Set(allData.map(row => row.Alumne))].filter(Boolean).sort();
+            allAlumneSelect.innerHTML = '<option value="">Selecciona un alumne</option>';
+            allAlumnes.forEach(alumne => {
+                const option = document.createElement('option');
+                option.value = alumne;
+                option.textContent = alumne;
+                allAlumneSelect.appendChild(option);
+            });
+        }
+        
+        function loadAllStudentRecords() {
+            clearMessages();
+            const selectedAlumne = allAlumneSelect.value;
+            if (!selectedAlumne) {
+                allStudentRecordsContainer.classList.add('hidden');
+                return;
+            }
+            
+            const studentRecords = allData.filter(row => row.Alumne === selectedAlumne);
+            studentRecords.sort((a, b) => {
+                const dateA = parseDate(a.Data);
+                const dateB = parseDate(b.Data);
+                return dateB - dateA; // Més recent primer
+            });
+            
+            allStudentName.textContent = `Registres per a ${selectedAlumne}`;
+            allStudentRecordsTableBody.innerHTML = '';
+            
+            if (studentRecords.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="5" style="text-align: center; font-style: italic; color: #666;">No hi ha registres per aquest alumne</td>`;
+                allStudentRecordsTableBody.appendChild(row);
+            } else {
+                studentRecords.forEach(record => {
+                    const tipoClass = getTipoClass(record.Tipus);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${formatDate(record.Data)}</td>
+                        <td>${record.Curs || 'N/A'}</td>
+                        <td>${record.Ensenyament || 'N/A'}</td>
+                        <td><span class="tipo-badge ${tipoClass}">${record.Tipus || 'N/A'}</span></td>
+                        <td>${record.Anotació || 'Sense anotació'}</td>
+                    `;
+                    allStudentRecordsTableBody.appendChild(row);
+                });
+            }
+            allStudentRecordsContainer.classList.remove('hidden');
+        }
+
+        // --- Funcions per a la pestanya "Grups" ---
+        function populateGroupCursos() {
+            const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
+            groupCursSelect.innerHTML = '<option value="">Selecciona curs</option>';
+            cursos.forEach(curs => {
+                const option = document.createElement('option');
+                option.value = curs;
+                option.textContent = curs;
+                groupCursSelect.appendChild(option);
+            });
+        }
+
+        function onGroupCursChange() {
+            const curs = groupCursSelect.value;
+            const ensenyaments = [...new Set(allData
+                .filter(row => row.Curs === curs)
+                .map(row => row.Ensenyament))
+            ].filter(Boolean).sort();
+
+            groupEnsenyamentSelect.innerHTML = '<option value="">Selecciona ensenyament</option>';
+            ensenyaments.forEach(ensenyament => {
+                const option = document.createElement('option');
+                option.value = ensenyament;
+                option.textContent = ensenyament;
+                groupEnsenyamentSelect.appendChild(option);
+            });
+            groupEnsenyamentSelect.disabled = ensenyaments.length === 0;
+            groupInfo.classList.add('hidden');
+        }
+
+        function onGroupEnsenyamentChange() {
+            clearMessages();
+            const selectedCurs = groupCursSelect.value;
+            const selectedEnsenyament = groupEnsenyamentSelect.value;
+            if (!selectedCurs || !selectedEnsenyament) {
+                groupInfo.classList.add('hidden');
+                return;
+            }
+
+            const groupRecords = allData.filter(row =>
+                row.Curs === selectedCurs &&
+                row.Ensenyament === selectedEnsenyament
+            );
+
+            // Ordenació: per Alumne (alfabètic) i després per Data (més antic a més recent)
+            groupRecords.sort((a, b) => {
+                const alumneCompare = a.Alumne.localeCompare(b.Alumne);
+                if (alumneCompare !== 0) {
+                    return alumneCompare;
+                }
+                const dateA = parseDate(a.Data);
+                const dateB = parseDate(b.Data);
+                return dateA - dateB;
+            });
+
+            groupName.textContent = `Registres per al grup: ${selectedEnsenyament} (${selectedCurs})`;
+            groupRecordsTableBody.innerHTML = '';
+            
+            if (groupRecords.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="4" style="text-align: center; font-style: italic; color: #666;">No hi ha registres per a aquest grup</td>`;
+                groupRecordsTableBody.appendChild(row);
+            } else {
+                groupRecords.forEach(record => {
+                    const tipoClass = getTipoClass(record.Tipus);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${formatDate(record.Data)}</td>
+                        <td>${record.Alumne || 'N/A'}</td>
+                        <td><span class="tipo-badge ${tipoClass}">${record.Tipus || 'N/A'}</span></td>
+                        <td>${record.Anotació || 'Sense anotació'}</td>
+                    `;
+                    groupRecordsTableBody.appendChild(row);
+                });
+            }
+            groupInfo.classList.remove('hidden');
+        }
+
+        // --- Funcions del formulari de nova anotació ---
+        function populateFormCursos() {
+            const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
+            formCurs.innerHTML = '<option value="">Selecciona curs</option>';
+            cursos.forEach(curs => {
+                const option = document.createElement('option');
+                option.value = curs;
+                option.textContent = curs;
+                formCurs.appendChild(option);
+            });
+        }
+        
+        function populateFormEnsenyaments() {
+            const selectedCurs = newCurs.value.trim() || formCurs.value;
+            if (!selectedCurs) {
+                formEnsenyament.innerHTML = '<option value="">Selecciona primer un curs</option>';
+                return;
+            }
+            
+            const ensenyaments = [...new Set(allData
+                .filter(row => row.Curs === selectedCurs)
+                .map(row => row.Ensenyament))
+            ].filter(Boolean).sort();
+            
+            formEnsenyament.innerHTML = '<option value="">Selecciona ensenyament</option>';
+            ensenyaments.forEach(ensenyament => {
+                const option = document.createElement('option');
+                option.value = ensenyament;
+                option.textContent = ensenyament;
+                formEnsenyament.appendChild(option);
+            });
+        }
+        
+        function populateFormAlumnes() {
+            const selectedCurs = newCurs.value.trim() || formCurs.value;
+            const selectedEnsenyament = newEnsenyament.value.trim() || formEnsenyament.value;
+            
+            if (!selectedCurs || !selectedEnsenyament) {
+                formAlumne.innerHTML = '<option value="">Selecciona primer curs i ensenyament</option>';
+                return;
+            }
+            
+            const alumnes = [...new Set(allData
+                .filter(row => row.Curs === selectedCurs && row.Ensenyament === selectedEnsenyament)
+                .map(row => row.Alumne))
+            ].filter(Boolean).sort();
+            
+            formAlumne.innerHTML = '<option value="">Selecciona alumne</option>';
+            alumnes.forEach(alumne => {
+                const option = document.createElement('option');
+                option.value = alumne;
+                option.textContent = alumne;
+                formAlumne.appendChild(option);
+            });
+        }
+        
+        function onFormCursChange() {
+            newCurs.value = '';
+            populateFormEnsenyaments();
+            populateFormAlumnes();
+        }
+        
+        function onFormEnsenyamentChange() {
+            newEnsenyament.value = '';
+            populateFormAlumnes();
+        }
+        
+        function onNewCursInput() {
+            if (newCurs.value) {
+                formCurs.value = '';
+                populateFormEnsenyaments();
+                populateFormAlumnes();
+            }
+        }
+        
+        function onNewEnsenyamentInput() {
+            if (newEnsenyament.value) {
+                formEnsenyament.value = '';
+                populateFormAlumnes();
+            }
+        }
+        
+        function onNewAlumneInput() {
+            if (newAlumne.value) {
+                formAlumne.value = '';
+            }
+        }
+
+        // --- Funcions auxiliars per a dates i confirmació ---
+        function getTipoClass(tipo) {
+            if (!tipo) return 'default';
+            const cleanedTipo = tipo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s/g, '');
+            return `tipo-${cleanedTipo}`;
+        }
+        
+        function parseDate(dateStr) {
+            if (!dateStr) return new Date(0);
+            if (dateStr.includes('/')) {
+                const [day, month, year] = dateStr.split('/');
+                return new Date(`${year}-${month}-${day}`);
+            }
+            const date = new Date(dateStr);
+            return isNaN(date.getTime()) ? new Date(0) : date;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            if (dateStr.includes('/')) {
+                return dateStr;
+            }
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('ca-ES');
+        }
+
+        function showConfirmation() {
+            clearMessages();
+            const date = newRecordDate.value;
+            const type = newRecordType.value;
+            const note = newRecordNote.value;
+            
+            const cursValue = newCurs.value.trim() || formCurs.value;
+            const ensenyamentValue = newEnsenyament.value.trim() || formEnsenyament.value;
+            const alumneValue = newAlumne.value.trim() || formAlumne.value;
+
+            if (!cursValue || !ensenyamentValue || !alumneValue || !date || !type || !note.trim()) {
+                showError('Si us plau, omple tots els camps obligatoris.');
+                return;
+            }
+
+            const tipoClass = getTipoClass(type);
+            const confirmationHTML = `
+                <p><strong>Curs:</strong> ${cursValue}</p>
+                <p><strong>Ensenyament:</strong> ${ensenyamentValue}</p>
+                <p><strong>Alumne:</strong> ${alumneValue}</p>
+                <p><strong>Data:</strong> ${formatDate(date)}</p>
+                <p><strong>Tipus:</strong> <span class="tipo-badge ${tipoClass}">${type}</span></p>
+                <p><strong>Anotació:</strong> ${note}</p>
+            `;
+            confirmationDetails.innerHTML = confirmationHTML;
+            confirmationModal.classList.remove('hidden');
+        }
+
+        async function confirmAddRecord() {
+            hideConfirmation();
+            showLoading('Afegint anotació...');
+            clearMessages();
+            
+            const selectedCurs = newCurs.value.trim() || formCurs.value;
+            const selectedEnsenyament = newEnsenyament.value.trim() || formEnsenyament.value;
+            const selectedAlumne = newAlumne.value.trim() || formAlumne.value;
+
+            const date = newRecordDate.value;
+            const type = newRecordType.value;
+            const note = newRecordNote.value;
+            
+            const formattedDate = formatDate(date);
+
+            const params = new URLSearchParams();
+            params.append('action', 'write');
+            params.append('sheetId', SHEET_ID);
+            params.append('sheetName', FULL);
+            params.append('curs', selectedCurs);
+            params.append('ensenyament', selectedEnsenyament);
+            params.append('alumne', selectedAlumne);
+            params.append('data', formattedDate);
+            params.append('tipus', type);
+            params.append('anotacio', note);
+
+            const url = `${SCRIPT_URL}?${params.toString()}`;
+
+            try {
+                const result = await makeJSONPRequest(url);
+
+                if (result.success) {
+                    showSuccess('Anotació afegida correctament!');
+                    loadData(); // Recarreguem totes les dades per a totes les pestanyes
+                    
+                    // Netejar només els camps de text i selecció de la nova anotació
+                    newRecordNote.value = '';
+                    newRecordType.value = '';
+                    newRecordDate.value = new Date().toISOString().split('T')[0];
+                    newCurs.value = '';
+                    newEnsenyament.value = '';
+                    newAlumne.value = '';
+                } else {
+                    throw new Error(result.message || 'Error desconegut del servidor.');
+                }
+            } catch (error) {
+                console.error('Error afegint anotació:', error);
+                showError('Error afegint anotació: ' + error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function hideConfirmation() {
+            confirmationModal.classList.add('hidden');
+        }
+
+        function showLoading(message) {
+            loadingMessage.textContent = message;
+            loadingOverlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            loadingOverlay.classList.add('hidden');
+        }
+
+        function clearMessages() {
+            messageContainer.innerHTML = '';
+        }
+
+        function showError(message) {
+            clearMessages();
+            const errorElement = document.createElement('div');
+            errorElement.className = 'message error';
+            errorElement.innerHTML = `<strong class="font-bold">Error!</strong> <span class="ml-2">${message}</span>`;
+            messageContainer.appendChild(errorElement);
+        }
+
+        function showSuccess(message) {
+            clearMessages();
+            const successElement = document.createElement('div');
+            successElement.className = 'message success';
+            successElement.innerHTML = `<strong class="font-bold">Èxit!</strong> <span class="ml-2">${message}</span>`;
+            messageContainer.appendChild(successElement);
+        }
+    </script>
+</body>
+</html>
