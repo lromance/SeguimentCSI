@@ -3,432 +3,1095 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3Gestió d'Anotacions d'Alumnes</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Inter Font -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <title>Seguiment Alumnes CFA La Pau</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Inter', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border-left: 5px solid #2a5298;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        select, input[type="text"], input[type="date"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus, textarea:focus {
+            outline: none;
+            border-color: #2a5298;
+            box-shadow: 0 0 0 3px rgba(42, 82, 152, 0.1);
+        }
+
+        button {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(42, 82, 152, 0.3);
+        }
+        
+        #buttonGroup {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .student-info {
+            margin-top: 30px;
+        }
+
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            table-layout: fixed;
+        }
+        
+        #recordsTable th:nth-child(1),
+        #recordsTable td:nth-child(1) {
+            width: 120px;
+        }
+        #recordsTable th:nth-child(2),
+        #recordsTable td:nth-child(2) {
+            width: 140px;
+        }
+
+        #allRecordsTable th:nth-child(1),
+        #allRecordsTable td:nth-child(1) {
+            width: 100px;
+        }
+        #allRecordsTable th:nth-child(2),
+        #allRecordsTable td:nth-child(2) {
+            width: 120px;
+        }
+        #allRecordsTable th:nth-child(3),
+        #allRecordsTable td:nth-child(3) {
+            width: 120px;
+        }
+        #allRecordsTable th:nth-child(4),
+        #allRecordsTable td:nth-child(4) {
+            width: 120px;
+        }
+
+
+        .records-table th {
+            background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .records-table td {
+            padding: 15px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .records-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .tipo-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .tipo-acadèmic { background: #e3f2fd; color: #1976d2; }
+        .tipo-social { background: #f3e5f5; color: #7b1fa2; }
+        .tipo-absentisme { background: #fff3e0; color: #f57c00; }
+        .tipo-baixa { background: #ffebee; color: #d32f2f; }
+        .tipo-derivació { background: #e8f5e8; color: #388e3c; }
+
+        .new-record-form {
+            background: #fff;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .confirmation-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .loading-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.8);
+            z-index: 2000;
+            font-size: 1.2em;
+            color: #1e3c72;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2a5298;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .message-container {
+            margin-bottom: 20px;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: block;
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            border: 1px solid #d32f2f;
+        }
+
+        .success {
+            color: #388e3c;
+            background: #e8f5e8;
+            border: 1px solid #388e3c;
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body>
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <span id="loadingMessage">Carregant...</span>
+    </div>
 
-    <!-- Main Container -->
-    <div class="container mx-auto p-4 md:p-8">
-        <h1 class="text-4xl font-bold text-center text-blue-800 mb-8">Gestió d'Anotacions d'Alumnes</h1>
-
-        <!-- Loading Indicator -->
-        <div id="loading-indicator" class="flex justify-center items-center h-40">
-            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
-            <span class="ml-4 text-blue-500 font-semibold text-lg">Carregant dades...</span>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 CFA La Pau</h1>
+            <p>Sistema de Seguiment d'Alumnes</p>
         </div>
 
-        <!-- Main Dashboard Screen -->
-        <div id="dashboard" class="hidden transition-all duration-300">
-            <!-- Filter Section and Add Button -->
-            <div class="bg-white p-6 rounded-xl shadow-lg mb-6 flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4">
-                <div class="flex-grow flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 w-full">
-                    <div class="w-full">
-                        <label for="course-select" class="block text-sm font-medium text-gray-700">Curs</label>
-                        <select id="course-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 bg-gray-50"></select>
+        <div class="content">
+            <!-- Contenidor per a missatges d'error i èxit -->
+            <div id="messageContainer" class="message-container"></div>
+            
+            <!-- Pantalla principal per a la selecció d'alumnes per curs/ensenyament -->
+            <div id="mainScreen">
+                <!-- Selecció inicial -->
+                <div class="form-section">
+                    <h2>Selecciona Curs i Ensenyament</h2>
+                    
+                    <div class="form-group">
+                        <label for="cursSelect">Curs Acadèmic:</label>
+                        <select id="cursSelect">
+                            <!-- Options will be dynamically populated -->
+                        </select>
                     </div>
-                    <div class="w-full">
-                        <label for="subject-select" class="block text-sm font-medium text-gray-700">Ensenyament</label>
-                        <select id="subject-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 bg-gray-50"></select>
+    
+                    <div class="form-group">
+                        <label for="ensenyamentSelect">Ensenyament:</label>
+                        <select id="ensenyamentSelect" disabled>
+                            <option value="">Selecciona primer un curs</option>
+                        </select>
                     </div>
-                    <div class="w-full">
-                        <label for="student-select" class="block text-sm font-medium text-gray-700">Alumne</label>
-                        <select id="student-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3 bg-gray-50"></select>
+    
+                    <div class="form-group">
+                        <label for="alumneSelect">Alumne:</label>
+                        <select id="alumneSelect" disabled>
+                            <option value="">Selecciona primer un ensenyament</option>
+                        </select>
+                    </div>
+                    <div id="buttonGroup">
+                        <button id="loadStudentBtn" disabled>Carregar Informació de l'Alumne</button>
+                        <button id="searchStudentBtn">Cercar Alumne</button>
                     </div>
                 </div>
-                <button id="add-note-btn" class="bg-green-600 text-white font-bold py-3 px-6 rounded-full shadow-lg hover:bg-green-700 transition-all duration-300 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 w-full md:w-auto">
-                    Afegir nova anotació
-                </button>
+                
+                <!-- Informació de l'alumne (ara abans del formulari d'anotacions) -->
+                <div id="studentInfo" class="student-info hidden">
+                    <div class="form-section">
+                        <h2 id="studentName">Informació de l'Alumne</h2>
+                        <div id="recordsContainer">
+                            <table class="records-table" id="recordsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Tipus</th>
+                                        <th>Anotació</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recordsTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+    
+                <!-- El formulari per a noves anotacions s'ha mogut aquí fora de la secció d'informació de l'alumne per fer-lo sempre visible. -->
+                <div class="new-record-form">
+                    <h3>Afegir Nova Anotació</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formCurs">Curs:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="formCurs" style="flex: 1;">
+                                    <option value="">Selecciona curs</option>
+                                </select>
+                                <input type="text" id="newCurs" placeholder="Nou curs (ex: 2027-28)" style="flex: 1;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="formEnsenyament">Ensenyament:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="formEnsenyament" style="flex: 1;">
+                                    <option value="">Selecciona ensenyament</option>
+                                </select>
+                                <input type="text" id="newEnsenyament" placeholder="Nou ensenyament" style="flex: 1;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="formAlumne">Alumne:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select id="formAlumne" style="flex: 1;">
+                                    <option value="">Selecciona alumne</option>
+                                </select>
+                                <input type="text" id="newAlumne" placeholder="Nou alumne" style="flex: 1;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="newRecordDate">Data:</label>
+                            <input type="date" id="newRecordDate" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newRecordType">Tipus:</label>
+                            <select id="newRecordType" required>
+                                <option value="">Selecciona tipus</option>
+                                <option value="acadèmic">Acadèmic</option>
+                                <option value="social">Social</option>
+                                <option value="absentisme">Absentisme</option>
+                                <option value="baixa">Baixa</option>
+                                <option value="derivació">Derivació</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="newRecordNote">Anotació:</label>
+                        <textarea id="newRecordNote" rows="3" placeholder="Escriu l'anotació..." required></textarea>
+                    </div>
+    
+                    <button id="addRecordBtn">Afegir Anotació</button>
+                    <button id="backToStartBtn">Tornar a l'Inici</button>
+                </div>
             </div>
 
-            <!-- Student Notes Table -->
-            <div id="notes-section" class="bg-white p-6 rounded-xl shadow-lg">
-                <h2 class="text-2xl font-semibold mb-4 text-center" id="notes-title">Anotacions de l'alumne</h2>
-                <div id="notes-table-container" class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 shadow-md rounded-lg">
-                        <thead class="bg-blue-50">
-                            <tr>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase tracking-wider">Data</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase tracking-wider">Tipus d'anotació</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-blue-800 uppercase tracking-wider">Anotació</th>
-                            </tr>
-                        </thead>
-                        <tbody id="notes-table-body" class="bg-white divide-y divide-gray-200">
-                            <!-- Table rows will be inserted here by JavaScript -->
-                            <tr>
-                                <td colspan="3" class="px-6 py-4 text-sm text-gray-500 text-center">Selecciona un alumne per veure les seves anotacions.</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <!-- Pantalla de cerca d'alumne -->
+            <div id="searchScreen" class="content hidden">
+                <div class="form-section">
+                    <h2>Cerca d'Alumnes</h2>
+                    <div class="form-group">
+                        <label for="allAlumneSelect">Selecciona un alumne:</label>
+                        <select id="allAlumneSelect">
+                            <option value="">Selecciona un alumne</option>
+                        </select>
+                    </div>
+                    <div id="allRecordsContainer">
+                        <!-- Taula de registres de la cerca s'injectarà aquí -->
+                    </div>
+                    <button id="backFromSearchBtn" style="margin-top: 20px;">Tornar a l'inici</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modals -->
-
-    <!-- Modal Base Structure (hidden by default) -->
-    <div id="modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex justify-center items-center p-4 z-50 hidden transition-opacity duration-300">
-        <div id="modal-content" class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-2xl transform scale-95 transition-transform duration-300">
-            <!-- Modal content will be inserted here dynamically -->
+    <!-- Modal de confirmació -->
+    <div id="confirmationModal" class="confirmation-modal hidden">
+        <div class="modal-content">
+            <h3>Confirmar Nova Anotació</h3>
+            <div id="confirmationDetails"></div>
+            <div style="margin-top: 20px;">
+                <button id="confirmAddBtn">Confirmar</button>
+                <button id="cancelAddBtn" style="background: #666;">Cancel·lar</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // DOM elements references
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const dashboard = document.getElementById('dashboard');
+        // Configuració de l'API de Google Apps Script
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGCVet2879gYZ3iLsvKiIQB0FuDR6sF8gF-H_QPS8pRuUGjwuhXtdL4LpQStyLjvx7/exec';
+        const SHEET_ID = '1FWhKB7yu3rPFHMI8_Vzlqd1YzE68x86ZmuuV6Bbw55w';
+        const FULL = 'Taula';
 
-        const courseSelect = document.getElementById('course-select');
-        const subjectSelect = document.getElementById('subject-select');
-        const studentSelect = document.getElementById('student-select');
-        const notesTableBody = document.getElementById('notes-table-body');
-        const addNoteBtn = document.getElementById('add-note-btn');
-
-        const modalContainer = document.getElementById('modal-container');
-        const modalContent = document.getElementById('modal-content');
-
-        // Global state
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyz4SucxVXY9M-UoPUPe6mzEFSEJbv7u4S-2LqXgc2FUxFZwyNNstlxdNI_PAmqbSg/exec';
-        const SPREADSHEET_ID = '1FWhKB7yu3rPFHMI8_Vzlqd1YzE68x86ZmuuV6Bbw55w';
-
+        // Variables globals per a les dades i l'estat actual
         let allData = [];
-        let courses = [];
-        let subjects = [];
-        let students = [];
-        let selectedStudentData = [];
+        let currentSelection = {
+            curs: '',
+            ensenyament: '',
+            alumne: ''
+        };
+
+        // Elements del DOM
+        const mainScreen = document.getElementById('mainScreen');
+        const searchScreen = document.getElementById('searchScreen');
+
+        const cursSelect = document.getElementById('cursSelect');
+        const ensenyamentSelect = document.getElementById('ensenyamentSelect');
+        const alumneSelect = document.getElementById('alumneSelect');
+        const loadStudentBtn = document.getElementById('loadStudentBtn');
+        const searchStudentBtn = document.getElementById('searchStudentBtn');
+        const studentInfo = document.getElementById('studentInfo');
+        const studentName = document.getElementById('studentName');
+        const recordsTableBody = document.getElementById('recordsTableBody');
+        const confirmationModal = document.getElementById('confirmationModal');
+        const confirmationDetails = document.getElementById('confirmationDetails');
+        const messageContainer = document.getElementById('messageContainer');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const loadingMessage = document.getElementById('loadingMessage');
+
+        // Elements del formulari
+        const formCurs = document.getElementById('formCurs');
+        const formEnsenyament = document.getElementById('formEnsenyament');
+        const formAlumne = document.getElementById('formAlumne');
+        const newCurs = document.getElementById('newCurs');
+        const newEnsenyament = document.getElementById('newEnsenyament');
+        const newAlumne = document.getElementById('newAlumne');
+        const addRecordBtn = document.getElementById('addRecordBtn');
+        const backToStartBtn = document.getElementById('backToStartBtn');
         
-        let selectedCourse = '';
-        let selectedSubject = '';
-        let selectedStudent = '';
+        // Elements de la nova pantalla de cerca
+        const allAlumneSelect = document.getElementById('allAlumneSelect');
+        const allRecordsContainer = document.getElementById('allRecordsContainer');
+        const backFromSearchBtn = document.getElementById('backFromSearchBtn');
 
-        const noteTypes = ['Acadèmic', 'Social', 'Absentisme', 'Comportament', 'Altres'];
+        // Inicialització quan la pàgina es carrega
+        document.addEventListener('DOMContentLoaded', function() {
+            loadData();
+            setTodayDate();
+            setupEventListeners();
+        });
 
-        // --- Helper functions ---
-        
-        /**
-         * Fetches data from the Google Apps Script.
-         * @param {string} url The script URL.
-         * @param {string} method The HTTP method ('GET' or 'POST').
-         * @param {object} [data=null] The data to send with a POST request.
-         * @returns {Promise<object>} The JSON response.
-         */
-        async function fetchData(url, method, data = null) {
-            const options = {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-            };
-            if (data) {
-                options.body = JSON.stringify(data);
-            }
-
-            const response = await fetch(url, options);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return await response.json();
+        function setTodayDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('newRecordDate').value = today;
         }
 
-        /**
-         * Renders a custom modal with a given title, message, and buttons.
-         * @param {string} title The modal title.
-         * @param {string} message The modal body content (HTML string).
-         * @param {Array<object>} buttons Array of button objects { text, className, handler }.
-         */
-        function renderModal(title, message, buttons) {
-            let buttonsHtml = buttons.map(btn => 
-                `<button class="py-2 px-4 rounded-full font-semibold transition-all duration-200 ${btn.className}" onclick="${btn.handler}">${btn.text}</button>`
-            ).join('');
-
-            modalContent.innerHTML = `
-                <div class="flex justify-between items-center border-b pb-3 mb-4">
-                    <h3 class="text-xl font-bold">${title}</h3>
-                    <button class="text-gray-500 hover:text-gray-800" onclick="hideModal()">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                <div class="text-gray-700 mb-6">${message}</div>
-                <div class="flex justify-end space-x-4">${buttonsHtml}</div>
-            `;
-            modalContainer.classList.remove('hidden');
+        // Configura tots els listeners d'esdeveniments
+        function setupEventListeners() {
+            cursSelect.addEventListener('change', onCursChange);
+            ensenyamentSelect.addEventListener('change', onEnsenyamentChange);
+            alumneSelect.addEventListener('change', onAlumneChange);
+            loadStudentBtn.addEventListener('click', loadStudentInfo);
+            addRecordBtn.addEventListener('click', showConfirmation);
+            document.getElementById('confirmAddBtn').addEventListener('click', confirmAddRecord);
+            document.getElementById('cancelAddBtn').addEventListener('click', hideConfirmation);
+            backToStartBtn.addEventListener('click', backToStart);
+            
+            formCurs.addEventListener('change', onFormCursChange);
+            formEnsenyament.addEventListener('change', onFormEnsenyamentChange);
+            newCurs.addEventListener('input', onNewCursInput);
+            newEnsenyament.addEventListener('input', onNewEnsenyamentInput);
+            newAlumne.addEventListener('input', onNewAlumneInput);
+            
+            // Listeners de la nova funcionalitat de cerca
+            searchStudentBtn.addEventListener('click', showSearchScreen);
+            allAlumneSelect.addEventListener('change', onAllAlumneSelectChange);
+            backFromSearchBtn.addEventListener('click', showMainScreen);
         }
 
-        /** Hides the currently visible modal. */
-        function hideModal() {
-            modalContainer.classList.add('hidden');
-            modalContent.innerHTML = '';
-        }
-
-        /** Shows an error modal. */
-        function showErrorModal(message) {
-            renderModal(
-                'Error',
-                `<p class="text-red-600">${message}</p>`,
-                [{ text: 'Tanca', className: 'bg-gray-200 text-gray-800 hover:bg-gray-300', handler: 'hideModal()' }]
-            );
-        }
-
-        // --- Core Application Logic ---
-
-        /** Loads all data from Google Sheets and initializes the app. */
-        async function loadData() {
-            loadingIndicator.classList.remove('hidden');
-            dashboard.classList.add('hidden');
-
+        // Carrega les dades de l'API de Google Apps Script
+        async function loadData(selectedCurs = null, selectedEnsenyament = null, selectedAlumne = null) {
+            // Neteja els missatges anteriors
+            clearMessages();
             try {
-                const getUrl = `${SCRIPT_URL}?spreadsheetId=${SPREADSHEET_ID}`;
-                const response = await fetchData(getUrl, 'GET');
+                showLoading('Carregant dades...');
+                const url = `${SCRIPT_URL}?action=read&sheetId=${SHEET_ID}&sheetName=${FULL}`;
                 
-                if (response.status === 'success' && response.data) {
-                    allData = response.data;
-                    console.log('Data loaded:', allData);
+                const data = await makeJSONPRequest(url);
 
-                    // Extract unique courses and populate the dropdown
-                    courses = [...new Set(allData.map(item => item.Curs))].sort();
-                    populateDropdown(courseSelect, courses, 'Selecciona un curs...');
+                if (data && data.success) {
+                    const headers = data.data.shift();
+                    allData = data.data.map(row => {
+                        let obj = {};
+                        headers.forEach((header, i) => {
+                            obj[header] = row[i];
+                        });
+                        return obj;
+                    });
                     
-                    dashboard.classList.remove('hidden');
+                    console.log('Dades carregades correctament:', allData.length, 'registres');
+                    
+                    // Actualitzem els menús de selecció per reflectir el context
+                    populateMainCursos();
+                    // NEW: Populate the form's cursos as soon as data is loaded.
+                    populateFormCursos();
+                    // Populate the new "search" dropdown
+                    populateAllAlumnes();
+
+                    if (selectedCurs && selectedEnsenyament && selectedAlumne) {
+                        currentSelection.curs = selectedCurs;
+                        currentSelection.ensenyament = selectedEnsenyament;
+                        currentSelection.alumne = selectedAlumne;
+                        
+                        cursSelect.value = selectedCurs;
+                        populateEnsenyaments();
+                        ensenyamentSelect.value = selectedEnsenyament;
+                        populateAlumnes();
+                        alumneSelect.value = selectedAlumne;
+                        loadStudentInfo(); // Carreguem la informació de l'alumne
+                    } else {
+                        // Comportament per defecte si no hi ha selecció
+                        ensenyamentSelect.disabled = true;
+                        alumneSelect.disabled = true;
+                    }
                 } else {
-                    showErrorModal(`Error al carregar les dades: ${response.message || 'Resposta inesperada.'}`);
+                    throw new Error(data ? data.message : 'Resposta invàlida del servidor');
                 }
             } catch (error) {
-                showErrorModal(`Ha fallat la connexió: ${error.message}`);
+                console.error('Error carregant dades:', error);
+                showError('Error de connexió: ' + error.message + '. Si us plau, comprova la consola del navegador per a més detalls.');
             } finally {
-                loadingIndicator.classList.add('hidden');
+                hideLoading();
             }
         }
-
-        /** Populates a dropdown with a given array of values. */
-        function populateDropdown(dropdown, values, placeholder) {
-            dropdown.innerHTML = `<option value="" disabled selected>${placeholder}</option>`;
-            values.forEach(value => {
+        
+        function populateMainCursos() {
+            const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
+            cursSelect.innerHTML = '<option value="">Selecciona curs</option>';
+            cursos.forEach(curs => {
                 const option = document.createElement('option');
-                option.value = value;
-                option.textContent = value;
-                dropdown.appendChild(option);
+                option.value = curs;
+                option.textContent = curs;
+                cursSelect.appendChild(option);
             });
-            dropdown.disabled = values.length === 0;
         }
 
-        /** Updates the subjects dropdown based on the selected course. */
-        function updateSubjects() {
-            selectedCourse = courseSelect.value;
-            subjectSelect.value = '';
-            studentSelect.value = '';
-            notesTableBody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-sm text-gray-500 text-center">Selecciona un alumne per veure les seves anotacions.</td></tr>';
-            
-            if (selectedCourse) {
-                const filteredSubjects = [...new Set(allData
-                    .filter(item => item.Curs === selectedCourse)
-                    .map(item => item.Ensenyament))].sort();
-                populateDropdown(subjectSelect, filteredSubjects, 'Selecciona un ensenyament...');
-            } else {
-                populateDropdown(subjectSelect, [], 'Selecciona un ensenyament...');
-            }
-            populateDropdown(studentSelect, [], 'Selecciona un alumne...');
-        }
 
-        /** Updates the students dropdown based on the selected course and subject. */
-        function updateStudents() {
-            selectedSubject = subjectSelect.value;
-            studentSelect.value = '';
-            notesTableBody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-sm text-gray-500 text-center">Selecciona un alumne per veure les seves anotacions.</td></tr>';
-
-            if (selectedCourse && selectedSubject) {
-                const filteredStudents = [...new Set(allData
-                    .filter(item => item.Curs === selectedCourse && item.Ensenyament === selectedSubject)
-                    .map(item => item.Alumne))].sort();
-                populateDropdown(studentSelect, filteredStudents, 'Selecciona un alumne...');
-            } else {
-                populateDropdown(studentSelect, [], 'Selecciona un alumne...');
-            }
-        }
-
-        /** Renders the notes table for the selected student. */
-        function renderStudentNotes() {
-            selectedStudent = studentSelect.value;
-            
-            if (selectedStudent) {
-                selectedStudentData = allData.filter(item =>
-                    item.Curs === selectedCourse &&
-                    item.Ensenyament === selectedSubject &&
-                    item.Alumne === selectedStudent
-                );
-
-                // Sort notes by date in descending order
-                selectedStudentData.sort((a, b) => new Date(b.Data) - new Date(a.Data));
+        // Funció per fer peticions JSONP (evita problemes de CORS)
+        function makeJSONPRequest(url) {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+                let script = null;
+                let timeoutId = null;
                 
-                let notesHtml = '';
-                if (selectedStudentData.length > 0) {
-                    notesHtml = selectedStudentData.map((note, index) => `
-                        <tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${note.Data}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${note["Tipus d'anotació"]}</td>
-                            <td class="px-6 py-4 text-sm text-gray-500">${note.Anotació}</td>
-                        </tr>
-                    `).join('');
-                } else {
-                    notesHtml = `<tr><td colspan="3" class="px-6 py-4 text-sm text-gray-500 text-center">Aquest alumne no té anotacions.</td></tr>`;
+                const cleanup = () => {
+                    if (script && script.parentNode) {
+                        script.parentNode.removeChild(script);
+                    }
+                    if (window[callbackName]) {
+                        delete window[callbackName];
+                    }
+                    if (timeoutId) {
+                        clearTimeout(timeoutId);
+                    }
+                };
+                
+                try {
+                    script = document.createElement('script');
+                    const finalUrl = new URL(url);
+                    finalUrl.searchParams.append('callback', callbackName);
+                    
+                    console.log('JSONP URL:', finalUrl.toString());
+                    script.src = finalUrl.toString();
+                    
+                    window[callbackName] = function(data) {
+                        cleanup();
+                        console.log('JSONP resposta rebuda:', data);
+                        resolve(data);
+                    };
+                    
+                    script.onerror = function(error) {
+                        cleanup();
+                        console.error('Error JSONP script:', error);
+                        reject(new Error('Error carregant l\'script JSONP'));
+                    };
+                    
+                    timeoutId = setTimeout(() => {
+                        cleanup();
+                        reject(new Error('Timeout de la petició JSONP (15s)'));
+                    }, 15000);
+                    
+                    document.head.appendChild(script);
+                } catch (error) {
+                    cleanup();
+                    reject(error);
                 }
+            });
+        }
 
-                notesTableBody.innerHTML = notesHtml;
+        // Lògica per actualitzar els menús desplegables de la selecció principal
+        function onCursChange() {
+            currentSelection.curs = cursSelect.value;
+            currentSelection.ensenyament = '';
+            currentSelection.alumne = '';
+            populateEnsenyaments();
+            resetAlumnes();
+            resetStudentInfo();
+        }
+
+        function populateEnsenyaments() {
+            const curs = cursSelect.value;
+            const ensenyaments = [...new Set(allData
+                .filter(row => row.Curs === curs)
+                .map(row => row.Ensenyament))
+            ].filter(Boolean).sort();
+
+            ensenyamentSelect.innerHTML = '<option value="">Selecciona ensenyament</option>';
+            ensenyaments.forEach(ensenyament => {
+                const option = document.createElement('option');
+                option.value = ensenyament;
+                option.textContent = ensenyament;
+                ensenyamentSelect.appendChild(option);
+            });
+
+            ensenyamentSelect.disabled = ensenyaments.length === 0;
+        }
+
+        function onEnsenyamentChange() {
+            currentSelection.ensenyament = ensenyamentSelect.value;
+            currentSelection.alumne = '';
+            populateAlumnes();
+            resetStudentInfo();
+        }
+
+        function populateAlumnes() {
+            const curs = currentSelection.curs;
+            const ensenyament = ensenyamentSelect.value;
+            
+            if (!ensenyament) {
+                resetAlumnes();
+                return;
+            }
+            const alumnes = [...new Set(allData
+                .filter(row => row.Curs === curs && row.Ensenyament === ensenyament)
+                .map(row => row.Alumne))
+            ].filter(Boolean).sort();
+
+            alumneSelect.innerHTML = '<option value="">Selecciona alumne</option>';
+            alumnes.forEach(alumne => {
+                const option = document.createElement('option');
+                option.value = alumne;
+                option.textContent = alumne;
+                alumneSelect.appendChild(option);
+            });
+
+            alumneSelect.disabled = alumnes.length === 0;
+        }
+
+        function onAlumneChange() {
+            currentSelection.alumne = alumneSelect.value;
+            loadStudentBtn.disabled = !currentSelection.alumne;
+            resetStudentInfo();
+        }
+
+        function resetAlumnes() {
+            alumneSelect.innerHTML = '<option value="">Selecciona primer un ensenyament</option>';
+            alumneSelect.disabled = true;
+            loadStudentBtn.disabled = true;
+        }
+
+        function resetStudentInfo() {
+            studentInfo.classList.add('hidden');
+        }
+
+        // Carrega la informació d'un alumne seleccionat
+        function loadStudentInfo() {
+            clearMessages();
+            const studentRecords = allData.filter(row => 
+                row.Curs === currentSelection.curs &&
+                row.Ensenyament === currentSelection.ensenyament &&
+                row.Alumne === currentSelection.alumne
+            );
+
+            studentRecords.sort((a, b) => {
+                const dateA = parseDate(a.Data);
+                const dateB = parseDate(b.Data);
+                return dateB - dateA; // Més recent primer
+            });
+
+            studentName.textContent = `${currentSelection.alumne} - ${currentSelection.ensenyament} (${currentSelection.curs})`;
+            
+            recordsTableBody.innerHTML = '';
+            
+            if (studentRecords.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td colspan="3" style="text-align: center; font-style: italic; color: #666;">No hi ha registres per aquest alumne</td>`;
+                recordsTableBody.appendChild(row);
             } else {
-                notesTableBody.innerHTML = '<tr><td colspan="3" class="px-6 py-4 text-sm text-gray-500 text-center">Selecciona un alumne per veure les seves anotacions.</td></tr>';
+                studentRecords.forEach(record => {
+                    const tipoClass = record.Tipus?.toLowerCase().replace('è', 'e').replace('ó', 'o');
+                    row.innerHTML = `
+                        <td>${formatDate(record.Data)}</td>
+                        <td><span class="tipo-badge tipo-${tipoClass}">${record.Tipus || 'N/A'}</span></td>
+                        <td>${record.Anotació || 'Sense anotació'}</td>
+                    `;
+                    recordsTableBody.appendChild(row);
+                });
+            }
+
+            initializeForm();
+            studentInfo.classList.remove('hidden');
+            studentInfo.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Inicialitza el formulari amb les dades seleccionades
+        function initializeForm() {
+            formCurs.value = currentSelection.curs;
+            formEnsenyament.value = currentSelection.ensenyament;
+            formAlumne.value = currentSelection.alumne;
+        }
+        
+        function populateFormCursos() {
+            const cursos = [...new Set(allData.map(row => row.Curs))].filter(Boolean).sort();
+            formCurs.innerHTML = '<option value="">Selecciona curs</option>';
+            cursos.forEach(curs => {
+                const option = document.createElement('option');
+                option.value = curs;
+                option.textContent = curs;
+                formCurs.appendChild(option);
+            });
+        }
+        
+        function populateFormEnsenyaments() {
+            const selectedCurs = newCurs.value.trim() || formCurs.value;
+            if (!selectedCurs) {
+                formEnsenyament.innerHTML = '<option value="">Selecciona primer un curs</option>';
+                return;
+            }
+            
+            const ensenyaments = [...new Set(allData
+                .filter(row => row.Curs === selectedCurs)
+                .map(row => row.Ensenyament))
+            ].filter(Boolean).sort();
+            
+            formEnsenyament.innerHTML = '<option value="">Selecciona ensenyament</option>';
+            ensenyaments.forEach(ensenyament => {
+                const option = document.createElement('option');
+                option.value = ensenyament;
+                option.textContent = ensenyament;
+                formEnsenyament.appendChild(option);
+            });
+        }
+        
+        function populateFormAlumnes() {
+            const selectedCurs = newCurs.value.trim() || formCurs.value;
+            const selectedEnsenyament = newEnsenyament.value.trim() || formEnsenyament.value;
+            
+            if (!selectedCurs || !selectedEnsenyament) {
+                formAlumne.innerHTML = '<option value="">Selecciona primer curs i ensenyament</option>';
+                return;
+            }
+            
+            const alumnes = [...new Set(allData
+                .filter(row => row.Curs === selectedCurs && row.Ensenyament === selectedEnsenyament)
+                .map(row => row.Alumne))
+            ].filter(Boolean).sort();
+            
+            formAlumne.innerHTML = '<option value="">Selecciona alumne</option>';
+            alumnes.forEach(alumne => {
+                const option = document.createElement('option');
+                option.value = alumne;
+                option.textContent = alumne;
+                formAlumne.appendChild(option);
+            });
+        }
+        
+        // Event listeners per al formulari
+        function onFormCursChange() {
+            newCurs.value = '';
+            populateFormEnsenyaments();
+            populateFormAlumnes();
+        }
+        
+        function onFormEnsenyamentChange() {
+            newEnsenyament.value = '';
+            populateFormAlumnes();
+        }
+        
+        function onNewCursInput() {
+            if (newCurs.value) {
+                formCurs.value = '';
+                populateFormEnsenyaments();
+                populateFormAlumnes();
+            }
+        }
+        
+        function onNewEnsenyamentInput() {
+            if (newEnsenyament.value) {
+                formEnsenyament.value = '';
+                populateFormAlumnes();
+            }
+        }
+        
+        function onNewAlumneInput() {
+            if (newAlumne.value) {
+                formAlumne.value = '';
             }
         }
 
-        /** Shows the "add new note" form modal. */
-        function showAddNoteModal() {
-            if (!selectedStudent) {
-                showErrorModal('Si us plau, selecciona un alumne per afegir una nova anotació.');
+        // Funcions auxiliars per a dates i confirmació
+        function parseDate(dateStr) {
+            if (!dateStr) return new Date(0);
+            // Si la data té el format 'dd/mm/yyyy', la parseja correctament
+            if (dateStr.includes('/')) {
+                const [day, month, year] = dateStr.split('/');
+                return new Date(`${year}-${month}-${day}`);
+            }
+            // Si la data té el format 'yyyy-mm-dd' o 'T' (ISO), la parseja amb normalitat
+            const date = new Date(dateStr);
+            return isNaN(date.getTime()) ? new Date(0) : date;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'N/A';
+            // L'element input type="date" retorna una data en format 'yyyy-mm-dd'
+            const date = new Date(dateStr);
+            // Aquesta part gestiona les dates que ja venen amb el format 'dd/mm/aaaa' des del full de càlcul
+            if (dateStr.includes('/')) {
+                return dateStr;
+            }
+            // Retorna la data en el format 'dd/mm/yyyy'
+            return date.toLocaleDateString('ca-ES');
+        }
+
+        function showConfirmation() {
+            clearMessages();
+            const date = document.getElementById('newRecordDate').value;
+            const type = document.getElementById('newRecordType').value;
+            const note = document.getElementById('newRecordNote').value;
+            
+            const cursValue = newCurs.value.trim() || formCurs.value;
+            const ensenyamentValue = newEnsenyament.value.trim() || formEnsenyament.value;
+            const alumneValue = newAlumne.value.trim() || formAlumne.value;
+
+            if (!cursValue || !ensenyamentValue || !alumneValue || !date || !type || !note.trim()) {
+                showError('Si us plau, omple tots els camps obligatoris.');
                 return;
             }
 
-            const today = new Date().toISOString().split('T')[0];
-            const noteTypesOptions = noteTypes.map(type => 
-                `<option value="${type}">${type}</option>`
-            ).join('');
-
-            modalContent.innerHTML = `
-                <div class="flex justify-between items-center border-b pb-3 mb-4">
-                    <h3 class="text-xl font-bold">Afegir nova anotació</h3>
-                    <button class="text-gray-500 hover:text-gray-800" onclick="hideModal()">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                <form id="add-note-form">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Curs</label>
-                            <input type="text" value="${selectedCourse}" readonly class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm p-3">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Ensenyament</label>
-                            <input type="text" value="${selectedSubject}" readonly class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm p-3">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Alumne</label>
-                            <input type="text" value="${selectedStudent}" readonly class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm p-3">
-                        </div>
-                        <div>
-                            <label for="note-date" class="block text-sm font-medium text-gray-700">Data</label>
-                            <input type="date" id="note-date" value="${today}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3">
-                        </div>
-                        <div>
-                            <label for="note-type" class="block text-sm font-medium text-gray-700">Tipus d'anotació</label>
-                            <select id="note-type" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3">
-                                <option value="" disabled selected>Selecciona un tipus</option>
-                                ${noteTypesOptions}
-                            </select>
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label for="note-text" class="block text-sm font-medium text-gray-700">Anotació</label>
-                        <textarea id="note-text" rows="4" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-3"></textarea>
-                    </div>
-                    <div class="flex justify-end space-x-4">
-                        <button type="button" onclick="hideModal()" class="bg-gray-200 text-gray-800 hover:bg-gray-300 py-2 px-4 rounded-full font-semibold transition-colors duration-200">Cancel·la</button>
-                        <button type="submit" class="bg-blue-600 text-white hover:bg-blue-700 py-2 px-4 rounded-full font-semibold transition-colors duration-200">Revisa i envia</button>
-                    </div>
-                </form>
+            const confirmationHTML = `
+                <p><strong>Curs:</strong> ${cursValue}</p>
+                <p><strong>Ensenyament:</strong> ${ensenyamentValue}</p>
+                <p><strong>Alumne:</strong> ${alumneValue}</p>
+                <p><strong>Data:</strong> ${formatDate(date)}</p>
+                <p><strong>Tipus:</strong> <span class="tipo-badge tipo-${type?.toLowerCase().replace('è', 'e').replace('ó', 'o')}">${type}</span></p>
+                <p><strong>Anotació:</strong> ${note}</p>
             `;
-            modalContainer.classList.remove('hidden');
-            
-            // Add a submit event listener to the form to handle confirmation
-            document.getElementById('add-note-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                showConfirmSubmitModal();
-            });
+            confirmationDetails.innerHTML = confirmationHTML;
+            confirmationModal.classList.remove('hidden');
         }
 
-        /** Shows a confirmation modal before submitting a new note. */
-        function showConfirmSubmitModal() {
-            const formData = {
-                Curs: selectedCourse,
-                Ensenyament: selectedSubject,
-                Alumne: selectedStudent,
-                Data: document.getElementById('note-date').value,
-                "Tipus d'anotació": document.getElementById('note-type').value,
-                Anotació: document.getElementById('note-text').value,
-            };
-
-            const confirmMessage = `
-                <p>Estàs segur que vols afegir aquesta anotació?</p>
-                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <p><strong>Curs:</strong> ${formData.Curs}</p>
-                    <p><strong>Ensenyament:</strong> ${formData.Ensenyament}</p>
-                    <p><strong>Alumne:</strong> ${formData.Alumne}</p>
-                    <p><strong>Data:</strong> ${formData.Data}</p>
-                    <p><strong>Tipus:</strong> ${formData["Tipus d'anotació"]}</p>
-                    <p><strong>Anotació:</strong> ${formData.Anotació}</p>
-                </div>
-            `;
+        async function confirmAddRecord() {
+            hideConfirmation();
+            showLoading('Afegint anotació...');
+            clearMessages();
             
-            renderModal(
-                'Confirmar anotació',
-                confirmMessage,
-                [
-                    { text: 'Cancel·la', className: 'bg-gray-200 text-gray-800 hover:bg-gray-300', handler: 'showAddNoteModal()' },
-                    { text: 'Confirma i Envia', className: 'bg-green-600 text-white hover:bg-green-700', handler: 'submitNewNote()' }
-                ]
-            );
-        }
+            // Guardem la selecció actual per poder tornar a carregar-la després
+            const selectedCurs = newCurs.value.trim() || formCurs.value;
+            const selectedEnsenyament = newEnsenyament.value.trim() || formEnsenyament.value;
+            const selectedAlumne = newAlumne.value.trim() || formAlumne.value;
 
-        /** Submits the new note to the Google Apps Script. */
-        async function submitNewNote() {
-            hideModal(); // Hide the confirmation modal
-            loadingIndicator.classList.remove('hidden');
+            const date = document.getElementById('newRecordDate').value;
+            const type = document.getElementById('newRecordType').value;
+            const note = document.getElementById('newRecordNote').value;
+            
+            const formattedDate = formatDate(date);
 
-            const formData = {
-                action: 'addNote',
-                spreadsheetId: SPREADSHEET_ID,
-                Curs: selectedCourse,
-                Ensenyament: selectedSubject,
-                Alumne: selectedStudent,
-                Data: document.getElementById('note-date').value,
-                "Tipus d'anotació": document.getElementById('note-type').value,
-                Anotació: document.getElementById('note-text').value,
-            };
+            const params = new URLSearchParams();
+            params.append('action', 'write');
+            params.append('sheetId', SHEET_ID);
+            params.append('sheetName', FULL);
+            params.append('curs', selectedCurs);
+            params.append('ensenyament', selectedEnsenyament);
+            params.append('alumne', selectedAlumne);
+            params.append('data', formattedDate);
+            params.append('tipus', type);
+            params.append('anotacio', note);
+
+            const url = `${SCRIPT_URL}?${params.toString()}`;
 
             try {
-                const response = await fetchData(SCRIPT_URL, 'POST', formData);
+                const result = await makeJSONPRequest(url);
 
-                if (response.status === 'success') {
-                    renderModal(
-                        'Anotació afegida',
-                        `<p class="text-green-600">L'anotació s'ha afegit correctament.</p>`,
-                        [{ text: 'Tanca', className: 'bg-gray-200 text-gray-800 hover:bg-gray-300', handler: 'hideModal()' }]
-                    );
-                    // Refresh the data and the table
-                    await loadData();
-                    renderStudentNotes();
+                if (result.success) {
+                    showSuccess('Anotació afegida correctament!');
+                    // Recarreguem les dades i la UI per a l'alumne actual
+                    // La funció loadData ja no reinicia la UI si se li passa la selecció
+                    loadData(selectedCurs, selectedEnsenyament, selectedAlumne);
+                    
+                    // Netejar només els camps de text i selecció de la nova anotació
+                    document.getElementById('newRecordNote').value = '';
+                    document.getElementById('newRecordType').value = '';
+                    setTodayDate();
                 } else {
-                    showErrorModal(`Error a l'afegir l'anotació: ${response.message || 'Resposta inesperada.'}`);
+                    throw new Error(result.message || 'Error desconegut del servidor.');
                 }
             } catch (error) {
-                showErrorModal(`Ha fallat l'enviament: ${error.message}`);
+                console.error('Error afegint anotació:', error);
+                showError('Error afegint anotació: ' + error.message);
             } finally {
-                loadingIndicator.classList.add('hidden');
+                hideLoading();
             }
         }
 
-        // --- Event Listeners ---
-        window.addEventListener('load', loadData);
-        courseSelect.addEventListener('change', updateSubjects);
-        subjectSelect.addEventListener('change', updateStudents);
-        studentSelect.addEventListener('change', renderStudentNotes);
-        addNoteBtn.addEventListener('click', showAddNoteModal);
-    </script>
+        function hideConfirmation() {
+            confirmationModal.classList.add('hidden');
+        }
 
+        // Funció per tornar a la pantalla d'inici
+        function showMainScreen() {
+            mainScreen.classList.remove('hidden');
+            searchScreen.classList.add('hidden');
+            backToStart();
+            clearMessages();
+        }
+
+        // Funció per anar a la pantalla de cerca
+        function showSearchScreen() {
+            mainScreen.classList.add('hidden');
+            searchScreen.classList.remove('hidden');
+            // Ensure the all students dropdown is populated and the table is empty on screen transition
+            allAlumneSelect.value = '';
+            allRecordsContainer.innerHTML = '';
+            clearMessages();
+        }
+
+        function populateAllAlumnes() {
+            const allAlumnes = [...new Set(allData.map(row => row.Alumne))].filter(Boolean).sort();
+            allAlumneSelect.innerHTML = '<option value="">Selecciona un alumne</option>';
+            allAlumnes.forEach(alumne => {
+                const option = document.createElement('option');
+                option.value = alumne;
+                option.textContent = alumne;
+                allAlumneSelect.appendChild(option);
+            });
+        }
+        
+        function onAllAlumneSelectChange() {
+            const selectedAlumne = allAlumneSelect.value;
+            if (selectedAlumne) {
+                loadAllStudentRecords(selectedAlumne);
+            } else {
+                allRecordsContainer.innerHTML = '';
+            }
+        }
+        
+        function loadAllStudentRecords(selectedAlumne) {
+            const studentRecords = allData.filter(row => row.Alumne === selectedAlumne);
+            studentRecords.sort((a, b) => {
+                const dateA = parseDate(a.Data);
+                const dateB = parseDate(b.Data);
+                return dateB - dateA; // Més recent primer
+            });
+            
+            let html = `<h3>Registres per a ${selectedAlumne}</h3>`;
+            html += `<table class="records-table" id="allRecordsTable">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Curs</th>
+                        <th>Ensenyament</th>
+                        <th>Tipus</th>
+                        <th>Anotació</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            
+            if (studentRecords.length === 0) {
+                html += `<tr><td colspan="5" style="text-align: center; font-style: italic; color: #666;">No hi ha registres per aquest alumne</td></tr>`;
+            } else {
+                studentRecords.forEach(record => {
+                    const tipoClass = record.Tipus?.toLowerCase().replace('è', 'e').replace('ó', 'o');
+                    html += `<tr>
+                        <td>${formatDate(record.Data)}</td>
+                        <td>${record.Curs || 'N/A'}</td>
+                        <td>${record.Ensenyament || 'N/A'}</td>
+                        <td><span class="tipo-badge tipo-${tipoClass}">${record.Tipus || 'N/A'}</span></td>
+                        <td>${record.Anotació || 'Sense anotació'}</td>
+                    </tr>`;
+                });
+            }
+            html += `</tbody></table>`;
+            allRecordsContainer.innerHTML = html;
+        }
+
+        function backToStart() {
+            cursSelect.value = '';
+            ensenyamentSelect.value = '';
+            alumneSelect.value = '';
+
+            ensenyamentSelect.innerHTML = '<option value="">Selecciona primer un curs</option>';
+            ensenyamentSelect.disabled = true;
+            alumneSelect.innerHTML = '<option value="">Selecciona primer un ensenyament</option>';
+            alumneSelect.disabled = true;
+            loadStudentBtn.disabled = true;
+
+            resetStudentInfo();
+            clearMessages();
+        }
+
+        // Funcions per mostrar missatges de càrrega, error i èxit
+        function showLoading(message) {
+            loadingMessage.textContent = message;
+            loadingOverlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            loadingOverlay.classList.add('hidden');
+        }
+
+        function clearMessages() {
+            messageContainer.innerHTML = '';
+        }
+
+        function showError(message) {
+            clearMessages();
+            const errorElement = document.createElement('div');
+            errorElement.className = 'message error';
+            errorElement.innerHTML = `<strong class="font-bold">Error!</strong> <span class="ml-2">${message}</span>`;
+            messageContainer.appendChild(errorElement);
+        }
+
+        function showSuccess(message) {
+            clearMessages();
+            const successElement = document.createElement('div');
+            successElement.className = 'message success';
+            successElement.innerHTML = `<strong class="font-bold">Èxit!</strong> <span class="ml-2">${message}</span>`;
+            messageContainer.appendChild(successElement);
+        }
+    </script>
 </body>
 </html>
