@@ -152,7 +152,6 @@
             width: 120px;
         }
 
-
         .records-table th {
             background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
             color: white;
@@ -179,11 +178,14 @@
             text-transform: uppercase;
         }
 
-        .tipo-acadèmic { background: #e3f2fd; color: #1976d2; }
+        /* Colors per a cada tipus d'anotació. S'han corregit les classes per evitar accents. */
+        .tipo-academic { background: #e3f2fd; color: #1976d2; }
         .tipo-social { background: #f3e5f5; color: #7b1fa2; }
         .tipo-absentisme { background: #fff3e0; color: #f57c00; }
         .tipo-baixa { background: #ffebee; color: #d32f2f; }
-        .tipo-derivació { background: #e8f5e8; color: #388e3c; }
+        .tipo-derivacio { background: #e8f5e8; color: #388e3c; }
+        .tipo-tutoria { background: #e0f7fa; color: #00796b; }
+        .tipo-default { background: #e1e5e9; color: #666; }
 
         .new-record-form {
             background: #fff;
@@ -400,11 +402,12 @@
                             <label for="newRecordType">Tipus:</label>
                             <select id="newRecordType" required>
                                 <option value="">Selecciona tipus</option>
-                                <option value="acadèmic">Acadèmic</option>
-                                <option value="social">Social</option>
-                                <option value="absentisme">Absentisme</option>
-                                <option value="baixa">Baixa</option>
-                                <option value="derivació">Derivació</option>
+                                <option value="Acadèmic">Acadèmic</option>
+                                <option value="Social">Social</option>
+                                <option value="Absentisme">Absentisme</option>
+                                <option value="Baixa">Baixa</option>
+                                <option value="Derivació">Derivació</option>
+                                <option value="Tutoria">Tutoria</option>
                             </select>
                         </div>
                     </div>
@@ -727,6 +730,15 @@
             studentInfo.classList.add('hidden');
         }
 
+        // Funció per obtenir la classe CSS del tipus d'anotació
+        function getTipoClass(tipo) {
+            if (!tipo) return 'default';
+            // Normalitzem la cadena per eliminar accents i espais, i la convertim a minúscules
+            const cleanedTipo = tipo.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s/g, '');
+            // Retornem la classe CSS amb el prefix 'tipo-'
+            return `tipo-${cleanedTipo}`;
+        }
+
         // Carrega la informació d'un alumne seleccionat
         function loadStudentInfo() {
             clearMessages();
@@ -752,10 +764,11 @@
                 recordsTableBody.appendChild(row);
             } else {
                 studentRecords.forEach(record => {
-                    const tipoClass = record.Tipus?.toLowerCase().replace('è', 'e').replace('ó', 'o');
+                    const tipoClass = getTipoClass(record.Tipus);
+                    const row = document.createElement('tr');
                     row.innerHTML = `
                         <td>${formatDate(record.Data)}</td>
-                        <td><span class="tipo-badge tipo-${tipoClass}">${record.Tipus || 'N/A'}</span></td>
+                        <td><span class="tipo-badge ${tipoClass}">${record.Tipus || 'N/A'}</span></td>
                         <td>${record.Anotació || 'Sense anotació'}</td>
                     `;
                     recordsTableBody.appendChild(row);
@@ -902,12 +915,13 @@
                 return;
             }
 
+            const tipoClass = getTipoClass(type);
             const confirmationHTML = `
                 <p><strong>Curs:</strong> ${cursValue}</p>
                 <p><strong>Ensenyament:</strong> ${ensenyamentValue}</p>
                 <p><strong>Alumne:</strong> ${alumneValue}</p>
                 <p><strong>Data:</strong> ${formatDate(date)}</p>
-                <p><strong>Tipus:</strong> <span class="tipo-badge tipo-${type?.toLowerCase().replace('è', 'e').replace('ó', 'o')}">${type}</span></p>
+                <p><strong>Tipus:</strong> <span class="tipo-badge ${tipoClass}">${type}</span></p>
                 <p><strong>Anotació:</strong> ${note}</p>
             `;
             confirmationDetails.innerHTML = confirmationHTML;
@@ -1034,12 +1048,12 @@
                 html += `<tr><td colspan="5" style="text-align: center; font-style: italic; color: #666;">No hi ha registres per aquest alumne</td></tr>`;
             } else {
                 studentRecords.forEach(record => {
-                    const tipoClass = record.Tipus?.toLowerCase().replace('è', 'e').replace('ó', 'o');
+                    const tipoClass = getTipoClass(record.Tipus);
                     html += `<tr>
                         <td>${formatDate(record.Data)}</td>
                         <td>${record.Curs || 'N/A'}</td>
                         <td>${record.Ensenyament || 'N/A'}</td>
-                        <td><span class="tipo-badge tipo-${tipoClass}">${record.Tipus || 'N/A'}</span></td>
+                        <td><span class="tipo-badge ${tipoClass}">${record.Tipus || 'N/A'}</span></td>
                         <td>${record.Anotació || 'Sense anotació'}</td>
                     </tr>`;
                 });
