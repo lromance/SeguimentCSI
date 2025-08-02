@@ -1509,7 +1509,11 @@ Sugerencia de acción: [La sugerencia aquí]`;
                 let chatHistory = [];
                 chatHistory.push({ role: "user", parts: [{ text: prompt }] });
                 const payload = { contents: chatHistory };
-                const apiKey = "" 
+                
+                // IMPORTANT: Insereix aquí la teva pròpia clau d'API de Gemini per utilitzar l'aplicació fora de Canvas.
+                // Pots obtenir una clau a https://aistudio.google.com/app/apikey
+                const apiKey = "AIzaSyDHLqY0bxDKJPS7hmVY1zTmzlivK5f4OhQ" 
+
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 
                 const response = await fetch(apiUrl, {
@@ -1519,7 +1523,14 @@ Sugerencia de acción: [La sugerencia aquí]`;
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`Error de l'API: ${response.status} ${response.statusText}`);
+                    let errorDetails = '';
+                    try {
+                        const errorJson = await response.json();
+                        errorDetails = JSON.stringify(errorJson, null, 2);
+                    } catch (e) {
+                        errorDetails = await response.text();
+                    }
+                    throw new Error(`Error de l'API: ${response.status} ${response.statusText}. Detalls: ${errorDetails}`);
                 }
 
                 const result = await response.json();
@@ -1536,14 +1547,14 @@ Sugerencia de acción: [La sugerencia aquí]`;
 
             } catch (error) {
                 console.error('Error al generar el resum amb Gemini:', error);
-                showError('No s\'ha pogut generar el resum. Si us plau, intenta-ho de nou més tard.');
+                showError('No s\'ha pogut generar el resum. Per favor, verifica la teva clau d\'API i torna a intentar-ho més tard.');
             } finally {
                 hideLoading();
             }
         }
         
         function showGeminiOutput(text) {
-            document.getElementById('geminiOutputTitle').textContent = `Resumen y Sugerencia para ${alumneSelect.value}`;
+            document.getElementById('geminiOutputTitle').textContent = `Resum i Suggeriment per a ${alumneSelect.value}`;
             document.getElementById('geminiOutputContent').textContent = text;
             document.getElementById('geminiOutputModal').classList.remove('hidden');
         }
