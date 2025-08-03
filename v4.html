@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestió de Dades amb Google Sheets</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4">
+    <div class="max-w-7xl mx-auto">
+        <header class="text-center my-8">
+            <h1 class="text-4xl font-bold text-gray-900">Gestió de Dades de l'Institut</h1>
+            <p class="text-lg text-gray-600 mt-2">Aplicació per a llegir i escriure al full de càlcul de Google.</p>
+        </header>
+
+        <!-- Authentication Section -->
+        <div id="auth-container" class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200 text-center mb-8">
+            <h2 class="text-2xl font-semibold mb-4">Inicia la sessió a Google</h2>
+            <button id="authorize_button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow transition duration-300 ease-in-out transform hover:scale-105" disabled>
+                Autoritzar
+            </button>
+            <p id="auth-status" class="mt-4 text-gray-500">Carregant llibreries de Google...</p>
+        </div>
+
+        <!-- Main Application Content -->
+        <div id="app-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 hidden">
+            <!-- Grups Section -->
+            <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+                <h3 class="text-xl font-semibold mb-4 text-blue-600">Gestió de Grups</h3>
+                <form id="grups-form" class="space-y-4">
+                    <div>
+                        <label for="grups-curs" class="block text-sm font-medium text-gray-700">Curs Acadèmic</label>
+                        <input type="text" id="grups-curs" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" placeholder="Ex: 2024-2025" required>
+                    </div>
+                    <div>
+                        <label for="grups-ensenyament" class="block text-sm font-medium text-gray-700">Ensenyament</label>
+                        <input type="text" id="grups-ensenyament" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" placeholder="Ex: Batxillerat" required>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-300">
+                        Afegir Grup
+                    </button>
+                </form>
+                <div class="mt-4">
+                    <button id="grups-read-btn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-xl transition duration-300">
+                        Llegir Grups Existents
+                    </button>
+                    <ul id="grups-list" class="mt-4 list-disc list-inside space-y-1"></ul>
+                </div>
+                <p id="grups-message" class="mt-4 text-sm"></p>
+            </div>
+
+            <!-- Alumnes Section -->
+            <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+                <h3 class="text-xl font-semibold mb-4 text-purple-600">Gestió d'Alumnes</h3>
+                <form id="alumnes-form" class="space-y-4">
+                    <div>
+                        <label for="alumnes-nom" class="block text-sm font-medium text-gray-700">Nom de l'Alumne</label>
+                        <input type="text" id="alumnes-nom" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-purple-500 focus:ring-purple-500" placeholder="Ex: Maria García" required>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-300">
+                        Afegir Alumne
+                    </button>
+                </form>
+                <div class="mt-4">
+                    <button id="alumnes-read-btn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-xl transition duration-300">
+                        Llegir Alumnes Existents
+                    </button>
+                    <ul id="alumnes-list" class="mt-4 list-disc list-inside space-y-1"></ul>
+                </div>
+                <p id="alumnes-message" class="mt-4 text-sm"></p>
+            </div>
+
+            <!-- Matrículas Section -->
+            <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+                <h3 class="text-xl font-semibold mb-4 text-yellow-600">Gestió de Matrícules</h3>
+                <form id="matricules-form" class="space-y-4">
+                    <div>
+                        <label for="matricules-curs" class="block text-sm font-medium text-gray-700">Curs</label>
+                        <input type="text" id="matricules-curs" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500" placeholder="Ex: 2024-2025" required>
+                    </div>
+                    <div>
+                        <label for="matricules-ensenyament" class="block text-sm font-medium text-gray-700">Ensenyament</label>
+                        <input type="text" id="matricules-ensenyament" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500" placeholder="Ex: Batxillerat" required>
+                    </div>
+                    <div>
+                        <label for="matricules-alumne" class="block text-sm font-medium text-gray-700">Alumne</label>
+                        <input type="text" id="matricules-alumne" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-yellow-500 focus:ring-yellow-500" placeholder="Ex: Maria García" required>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-300">
+                        Afegir Matrícula
+                    </button>
+                </form>
+                <div class="mt-4">
+                    <button id="matricules-read-btn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-xl transition duration-300">
+                        Llegir Matrícules Existents
+                    </button>
+                    <ul id="matricules-list" class="mt-4 list-disc list-inside space-y-1"></ul>
+                </div>
+                <p id="matricules-message" class="mt-4 text-sm"></p>
+            </div>
+
+            <!-- Anotacions Section -->
+            <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+                <h3 class="text-xl font-semibold mb-4 text-red-600">Gestió d'Anotacions</h3>
+                <form id="anotacions-form" class="space-y-4">
+                    <div>
+                        <label for="anotacions-ensenyament" class="block text-sm font-medium text-gray-700">Ensenyament</label>
+                        <input type="text" id="anotacions-ensenyament" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" placeholder="Ex: Batxillerat" required>
+                    </div>
+                    <div>
+                        <label for="anotacions-alumne" class="block text-sm font-medium text-gray-700">Alumne</label>
+                        <input type="text" id="anotacions-alumne" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" placeholder="Ex: Maria García" required>
+                    </div>
+                    <div>
+                        <label for="anotacions-data" class="block text-sm font-medium text-gray-700">Data</label>
+                        <input type="date" id="anotacions-data" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" required>
+                    </div>
+                    <div>
+                        <label for="anotacions-tipus" class="block text-sm font-medium text-gray-700">Tipus</label>
+                        <input type="text" id="anotacions-tipus" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" placeholder="Ex: Seguiment" required>
+                    </div>
+                    <div>
+                        <label for="anotacions-anotacio" class="block text-sm font-medium text-gray-700">Anotació</label>
+                        <textarea id="anotacions-anotacio" class="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500" rows="3" placeholder="Detalls de l'anotació" required></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-xl shadow-md transition duration-300">
+                        Afegir Anotació
+                    </button>
+                </form>
+                <div class="mt-4">
+                    <button id="anotacions-read-btn" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-xl transition duration-300">
+                        Llegir Anotacions Existents
+                    </button>
+                    <ul id="anotacions-list" class="mt-4 list-disc list-inside space-y-1"></ul>
+                </div>
+                <p id="anotacions-message" class="mt-4 text-sm"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google API Client Library -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script>
+        // Placeholders for your API credentials. You must replace these with your own.
+        // Keep your CLIENT_ID and API_KEY secure and do not share them publicly.
+        // CLIENT_ID és l'identificador del client d'OAuth 2.0 que has creat a Google Cloud Console.
+        const CLIENT_ID = '134551406037-r4v2505iif2uqreoerjid61bcv4aktgl.apps.googleusercontent.com';
+        // API_KEY és la clau d'API que has creat a Google Cloud Console.
+        // S'ha actualitzat la clau d'API amb la que has proporcionat.
+        const API_KEY = 'AIzaSyD69lkn4BcjOaR3DFJZarcQcs8dgT4CYfU';
+        // SPREADSHEET_ID és l'ID del full de càlcul de Google.
+        const SPREADSHEET_ID = '1wlvnGyvwsIReC_1bSkB2wo4UecJPNpOTs2ksB2n8Iqc';
+        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+        const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+
+        // UI elements
+        const authContainer = document.getElementById('auth-container');
+        const authorizeButton = document.getElementById('authorize_button');
+        const authStatus = document.getElementById('auth-status');
+        const appContent = document.getElementById('app-content');
+
+        // Forms and lists
+        const grupsForm = document.getElementById('grups-form');
+        const grupsList = document.getElementById('grups-list');
+        const grupsReadBtn = document.getElementById('grups-read-btn');
+        const alumnesForm = document.getElementById('alumnes-form');
+        const alumnesList = document.getElementById('alumnes-list');
+        const alumnesReadBtn = document.getElementById('alumnes-read-btn');
+        const matriculesForm = document.getElementById('matricules-form');
+        const matriculesList = document.getElementById('matricules-list');
+        const matriculesReadBtn = document.getElementById('matricules-read-btn');
+        const anotacionsForm = document.getElementById('anotacions-form');
+        const anotacionsList = document.getElementById('anotacions-list');
+        const anotacionsReadBtn = document.getElementById('anotacions-read-btn');
+        
+        let gapiInited = false;
+
+        /**
+         * Loads the Google API client library.
+         */
+        function gapiLoaded() {
+            gapi.load('client:auth2', initializeGapiClient);
+        }
+
+        /**
+         * Initializes the Google API client.
+         */
+        async function initializeGapiClient() {
+            try {
+                await gapi.client.init({
+                    apiKey: API_KEY,
+                    discoveryDocs: DISCOVERY_DOCS,
+                });
+                
+                // Initialize the GoogleAuth object
+                await gapi.auth2.init({
+                    clientId: CLIENT_ID,
+                    scope: SCOPES,
+                });
+                
+                gapiInited = true;
+                maybeEnableButtons();
+                updateSigninStatus();
+                gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+            } catch (err) {
+                console.error("Error al inicialitzar el client de GAPI:", err);
+                authStatus.textContent = "Error al carregar l'API de Google. Comprova la teva clau d'API.";
+            }
+        }
+        
+        /**
+         * Enables the authorize button once both libraries are loaded.
+         */
+        function maybeEnableButtons() {
+            if (gapiInited) {
+                authorizeButton.disabled = false;
+                authStatus.textContent = "Llest per autoritzar.";
+            }
+        }
+        
+        /**
+         * Update the UI based on the user's sign-in status.
+         */
+        function updateSigninStatus() {
+            const isSignedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
+            if (isSignedIn) {
+                authStatus.textContent = "Autenticació completada.";
+                appContent.classList.remove('hidden');
+                authContainer.classList.add('hidden');
+            } else {
+                authStatus.textContent = "Si us plau, inicia la sessió per utilitzar l'aplicació.";
+                appContent.classList.add('hidden');
+                authContainer.classList.remove('hidden');
+            }
+        }
+        
+        /**
+         * Handle button click to sign in the user.
+         */
+        authorizeButton.onclick = () => {
+            gapi.auth2.getAuthInstance().signIn();
+        };
+
+        /**
+         * Appends a new row to the specified Google Sheet.
+         * @param {string} sheetName The name of the sheet (e.g., 'Grups').
+         * @param {Array<string>} data The data to append.
+         * @param {HTMLElement} messageElement The element to display messages.
+         */
+        async function appendToSheet(sheetName, data, messageElement) {
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.append({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: `${sheetName}!A1`,
+                    valueInputOption: 'USER_ENTERED',
+                    insertDataOption: 'INSERT_ROWS',
+                    resource: {
+                        values: [data],
+                    },
+                });
+                messageElement.textContent = `Dada afegida a la pestanya '${sheetName}' amb èxit!`;
+                messageElement.classList.remove('text-red-500');
+                messageElement.classList.add('text-green-600');
+                console.log('Append response:', response);
+            } catch (err) {
+                messageElement.textContent = `Error: ${err.result.error.message}`;
+                messageElement.classList.remove('text-green-600');
+                messageElement.classList.add('text-red-500');
+                console.error('Error appending data:', err);
+            }
+        }
+
+        /**
+         * Reads all data from a specified sheet and displays it in a list.
+         * @param {string} sheetName The name of the sheet.
+         * @param {HTMLElement} listElement The UL element to display the data.
+         * @param {function(Array<string>): string} formatFn A function to format each row for display.
+         */
+        async function readFromSheet(sheetName, listElement, formatFn) {
+            listElement.innerHTML = '<li>Carregant dades...</li>';
+            try {
+                const response = await gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: sheetName,
+                });
+                const rows = response.result.values;
+                listElement.innerHTML = ''; // Clear loading message
+                if (rows && rows.length > 1) {
+                    // Skip header row
+                    rows.slice(1).forEach(row => {
+                        const li = document.createElement('li');
+                        li.textContent = formatFn(row);
+                        listElement.appendChild(li);
+                    });
+                } else {
+                    const li = document.createElement('li');
+                    li.textContent = 'No hi ha dades disponibles.';
+                    listElement.appendChild(li);
+                }
+            } catch (err) {
+                listElement.innerHTML = `<li class="text-red-500">Error en carregar les dades: ${err.result.error.message}</li>`;
+                console.error('Error reading data:', err);
+            }
+        }
+
+        // Form Submission Listeners
+        grupsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const curs = document.getElementById('grups-curs').value;
+            const ensenyament = document.getElementById('grups-ensenyament').value;
+            await appendToSheet('Grups', [curs, ensenyament], document.getElementById('grups-message'));
+            grupsForm.reset();
+        });
+        
+        alumnesForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nom = document.getElementById('alumnes-nom').value;
+            await appendToSheet('Alumnes', [nom], document.getElementById('alumnes-message'));
+            alumnesForm.reset();
+        });
+
+        matriculesForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const curs = document.getElementById('matricules-curs').value;
+            const ensenyament = document.getElementById('matricules-ensenyament').value;
+            const alumne = document.getElementById('matricules-alumne').value;
+            await appendToSheet('Matrícules', [curs, ensenyament, alumne], document.getElementById('matricules-message'));
+            matriculesForm.reset();
+        });
+
+        anotacionsForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const ensenyament = document.getElementById('anotacions-ensenyament').value;
+            const alumne = document.getElementById('anotacions-alumne').value;
+            const data = document.getElementById('anotacions-data').value;
+            const tipus = document.getElementById('anotacions-tipus').value;
+            const anotacio = document.getElementById('anotacions-anotacio').value;
+            await appendToSheet('Anotacions', [ensenyament, alumne, data, tipus, anotacio], document.getElementById('anotacions-message'));
+            anotacionsForm.reset();
+        });
+
+        // Read Button Listeners
+        grupsReadBtn.addEventListener('click', () => {
+            readFromSheet('Grups', grupsList, (row) => `${row[0]} - ${row[1]}`);
+        });
+
+        alumnesReadBtn.addEventListener('click', () => {
+            readFromSheet('Alumnes', alumnesList, (row) => row[0]);
+        });
+
+        matriculesReadBtn.addEventListener('click', () => {
+            readFromSheet('Matrícules', matriculesList, (row) => `${row[0]} ${row[1]} per a ${row[2]}`);
+        });
+        
+        anotacionsReadBtn.addEventListener('click', () => {
+            readFromSheet('Anotacions', anotacionsList, (row) => `${row[0]} - ${row[1]} (${row[3]} el ${row[2]}): ${row[4]}`);
+        });
+
+        // Load the gapi client on window load
+        window.onload = gapiLoaded;
+    </script>
+</body>
+</html>
