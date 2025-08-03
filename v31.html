@@ -382,9 +382,8 @@
 
     <script>
         // --- CONFIGURATION ---
-        // IMPORTANT: Replace this URL with your actual Google Apps Script deployment URL.
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwLOxNDJBrJrfU12A14K7QKo3MaoD3nJ2HCOqNcj826dg7dfwi-IggrqZbgHEerdh0/exec';
-        const USE_MOCK_DATA = false; // Set to false when you have your Apps Script URL
+        const USE_MOCK_DATA = false; // Set to false to connect to Google Sheets
 
         // --- GLOBAL STATE ---
         let state = {
@@ -394,41 +393,9 @@
             anotacions: [],
             selectedGrup: null,
             selectedAlumne: null,
-            selectedMatriculaContext: null, // NEW: To store context for new annotation form
+            selectedMatriculaContext: null,
         };
-
-        // --- MOCK DATA (for testing without a live API) ---
-        const mockData = {
-            grups: [
-                { 'Curs Acadèmic': '2023-2024', 'Ensenyament': 'SMX1' },
-                { 'Curs Acadèmic': '2023-2024', 'Ensenyament': 'ASIX1' },
-                { 'Curs Acadèmic': '2024-2025', 'Ensenyament': 'SMX2' },
-                { 'Curs Acadèmic': '2024-2025', 'Ensenyament': 'DAM2' },
-            ],
-            alumnes: [
-                { 'Nom': 'Joan Petit' },
-                { 'Nom': 'Maria Camps' },
-                { 'Nom': 'Pere Vila' },
-                { 'Nom': 'Laia Soler' },
-            ],
-            matricules: [
-                { 'Curs': '2023-2024', 'Ensenyament': 'SMX1', 'Alumne': 'Joan Petit' },
-                { 'Curs': '2023-2024', 'Ensenyament': 'SMX1', 'Alumne': 'Maria Camps' },
-                { 'Curs': '2023-2024', 'Ensenyament': 'ASIX1', 'Alumne': 'Pere Vila' },
-                { 'Curs': '2024-2025', 'Ensenyament': 'SMX2', 'Alumne': 'Laia Soler' },
-                { 'Curs': '2024-2025', 'Ensenyament': 'SMX2', 'Alumne': 'Joan Petit' },
-                { 'Curs': '2024-2025', 'Ensenyament': 'DAM2', 'Alumne': 'Pere Vila' },
-            ],
-            anotacions: [
-                { 'Ensenyament': 'SMX1', 'Alumne': 'Joan Petit', 'Data': '2023-10-15', 'Tipus': 'academic', 'Anotació': 'Mostra dificultats amb les xarxes.' },
-                { 'Ensenyament': 'SMX1', 'Alumne': 'Maria Camps', 'Data': '2023-11-05', 'Tipus': 'social', 'Anotació': 'Bona integració amb el grup.' },
-                { 'Ensenyament': 'SMX1', 'Alumne': 'Joan Petit', 'Data': '2024-01-20', 'Tipus': 'tutoria', 'Anotació': 'S\'ha parlat amb ell sobre el seu progrés. Mostra més interès.' },
-                { 'Ensenyament': 'ASIX1', 'Alumne': 'Pere Vila', 'Data': '2024-02-10', 'Tipus': 'absentisme', 'Anotació': 'Falta injustificada.' },
-                { 'Ensenyament': 'SMX2', 'Alumne': 'Laia Soler', 'Data': '2024-09-30', 'Tipus': 'academic', 'Anotació': 'Excel·lent rendiment inicial.' },
-                { 'Ensenyament': 'SMX2', 'Alumne': 'Joan Petit', 'Data': '2024-10-05', 'Tipus': 'academic', 'Anotació': 'Continua millorant la seva actitud.' },
-            ]
-        };
-
+        
         // --- API & DATA HANDLING ---
         async function fetchData(sheetName) {
             if (USE_MOCK_DATA) {
@@ -437,12 +404,30 @@
             }
             showLoading();
             try {
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?action=get&sheet=${sheetName}`);
-                if (!response.ok) throw new Error(`Network response was not ok for ${sheetName}`);
+                const payload = { action: 'get', sheet: sheetName };
+                const response = await fetch(GOOGLE_SCRIPT_URL, {
+                    method: 'POST',
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) {
+                    throw new Error(`Error de red: ${response.status} ${response.statusText}`);
+                }
                 const data = await response.json();
+                if (data.error) {
+                    throw new Error(`Error del script: ${data.error}`);
+                }
                 return data;
             } catch (error) {
-                showToast(`Error carregant dades de ${sheetName}: ${error.message}`, 'error');
+                console.error(`Error completo al cargar datos de ${sheetName}:`, error);
+                let userMessage = `Error al cargar datos de ${sheetName}.`;
+                if (String(error).includes("fetch")) {
+                     userMessage += " Problema de red o permisos (CORS). Asegúrate de que el Google Apps Script está implementado con acceso para 'Cualquier usuario' y vuelve a cargar la página.";
+                } else {
+                    userMessage += ` Detalles: ${error.message}`;
+                }
+                showToast(userMessage, 'error');
                 return [];
             } finally {
                 hideLoading();
@@ -457,20 +442,28 @@
                 } else {
                     state[sheetName.toLowerCase()].push(data);
                 }
-                return new Promise(resolve => setTimeout(() => resolve({ success: true }), 200));
+                return Promise.resolve({ success: true });
             }
             showLoading();
             try {
+                const payload = { action: 'write', sheet: sheetName, data: data };
                 const response = await fetch(GOOGLE_SCRIPT_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sheet: sheetName, data: data })
+                    redirect: 'follow',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
                 });
-                if (!response.ok) throw new Error('Failed to post data');
-                return await response.json();
-            } catch (error)
-            {
-                showToast(`Error guardant dades a ${sheetName}: ${error.message}`, 'error');
+                if (!response.ok) {
+                    throw new Error(`Error de red al guardar: ${response.status}`);
+                }
+                const result = await response.json();
+                if (!result.success) {
+                   throw new Error(result.error || 'El script ha devuelto un error al guardar.');
+                }
+                return { success: true };
+            } catch (error) {
+                console.error(`Error completo al guardar datos en ${sheetName}:`, error);
+                showToast(`Error guardando datos: ${error.message}`, 'error');
                 return { success: false };
             } finally {
                 hideLoading();
@@ -490,9 +483,11 @@
             toastMessage.textContent = message;
             toast.className = `fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
             toast.classList.remove('opacity-0');
+            
+            const duration = type === 'error' ? 6000 : 3000;
             setTimeout(() => {
                 toast.classList.add('opacity-0');
-            }, 3000);
+            }, duration);
         }
         
         function showLoading() { document.getElementById('loading-modal').classList.remove('hidden'); }
@@ -523,24 +518,20 @@
             noBtn.addEventListener('click', listenerNo, { once: true });
         }
 
-        /**
-         * Formats a date string (e.g., '2024-10-15') to '15/10/2024'.
-         * @param {string} dateString The date string to format.
-         * @returns {string} The formatted date.
-         */
-        function formatDate(dateString) {
-            if (!dateString) return '';
-            // Create date object treating the input as UTC to avoid timezone issues
-            const parts = dateString.split('-');
-            if (parts.length !== 3) return dateString;
-            const date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-            
-            if (isNaN(date.getTime())) return dateString; // Return original if invalid
-            
+        function formatDate(dateInput) {
+            if (!dateInput) return '';
+            let date;
+            if (dateInput instanceof Date) {
+                date = dateInput;
+            } else {
+                const parts = String(dateInput).split('T')[0].split('-');
+                if (parts.length !== 3) return dateInput;
+                date = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+            }
+            if (isNaN(date.getTime())) return String(dateInput);
             const day = String(date.getUTCDate()).padStart(2, '0');
-            const month = String(date.getUTCMonth() + 1).padStart(2, '0'); // Month is 0-indexed
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
             const year = date.getUTCFullYear();
-            
             return `${day}/${month}/${year}`;
         }
 
@@ -632,13 +623,10 @@
             const anotacionsDelGrup = state.anotacions
                 .filter(a => alumnesMatriculats.includes(a.Alumne) && a.Ensenyament === ensenyament)
                 .sort((a, b) => {
-                    // Primary sort: by student name (Alumne) alphabetically
                     const nameA = a.Alumne.toLowerCase();
                     const nameB = b.Alumne.toLowerCase();
                     if (nameA < nameB) return -1;
                     if (nameA > nameB) return 1;
-
-                    // Secondary sort: by date, newest first
                     return new Date(b.Data) - new Date(a.Data);
                 });
 
@@ -666,7 +654,7 @@
             
             const result = await postData('Grups', newGrup);
             if(result.success) {
-                if(!USE_MOCK_DATA) state.grups.push(newGrup);
+                state.grups.push(newGrup);
                 populateGrupCursSelector();
                 populateGrupEnsenyamentsList(curs);
                 e.target.reset();
@@ -731,9 +719,7 @@
         }
 
         function handleMatriculaSelection(curs, ensenyament, alumne) {
-            // Store context for the new form
             state.selectedMatriculaContext = { curs, ensenyament, alumne };
-
             document.getElementById('selected-alumne-context-name').textContent = `${alumne} a ${curs} / ${ensenyament}`;
             document.getElementById('form-alumne-anotacio-name').textContent = alumne;
             const anotacionsListBody = document.getElementById('alumne-anotacions-list');
@@ -763,7 +749,7 @@
             const newAlumne = { 'Nom': nom };
             const result = await postData('Alumnes', newAlumne);
             if(result.success) {
-                if(!USE_MOCK_DATA) state.alumnes.push(newAlumne);
+                state.alumnes.push(newAlumne);
                 populateAlumneSelector();
                 e.target.reset();
                 showToast('Alumne afegit correctament!');
@@ -783,7 +769,7 @@
             
             const result = await postData('Matricules', newMatricula);
             if(result.success) {
-                if(!USE_MOCK_DATA) state.matricules.push(newMatricula);
+                state.matricules.push(newMatricula);
                 handleAlumneSelection(selectedAlumneName); // Refresh the list
                 showToast('Matrícula afegida correctament!');
             }
@@ -803,8 +789,7 @@
                 if (confirmed) {
                     const result = await postData('Anotacions', newAnotacio);
                     if (result.success) {
-                        if (!USE_MOCK_DATA) state.anotacions.push(newAnotacio);
-                        // Refresh the view
+                        state.anotacions.push(newAnotacio);
                         handleMatriculaSelection(curs, ensenyament, alumne);
                         e.target.reset();
                         document.getElementById('anotacio-alumne-data').valueAsDate = new Date();
@@ -859,22 +844,13 @@
                 filtered = filtered.filter(a => alumnesDelCurs.includes(a.Alumne) && ensenyamentsDelCurs.includes(a.Ensenyament));
             }
 
-            // Sort by Group, then by Student, then by Date
             filtered.sort((a, b) => {
                 const matriculaA = state.matricules.find(m => m.Alumne === a.Alumne && m.Ensenyament === a.Ensenyament);
                 const matriculaB = state.matricules.find(m => m.Alumne === b.Alumne && m.Ensenyament === b.Ensenyament);
-
                 const grupA = matriculaA ? `${matriculaA.Curs} / ${a.Ensenyament}` : a.Ensenyament;
                 const grupB = matriculaB ? `${matriculaB.Curs} / ${b.Ensenyament}` : b.Ensenyament;
-
-                if (grupA.localeCompare(grupB) !== 0) {
-                    return grupA.localeCompare(grupB);
-                }
-
-                if (a.Alumne.localeCompare(b.Alumne) !== 0) {
-                    return a.Alumne.localeCompare(b.Alumne);
-                }
-
+                if (grupA.localeCompare(grupB) !== 0) return grupA.localeCompare(grupB);
+                if (a.Alumne.localeCompare(b.Alumne) !== 0) return a.Alumne.localeCompare(b.Alumne);
                 return new Date(b.Data) - new Date(a.Data);
             });
             
@@ -926,7 +902,7 @@
                 if (confirmed) {
                     const result = await postData('Anotacions', newAnotacio);
                     if (result.success) {
-                        if (!USE_MOCK_DATA) state.anotacions.push(newAnotacio);
+                        state.anotacions.push(newAnotacio);
                         handleAnotacionsFilterChange();
                         e.target.reset();
                         document.getElementById('anotacio-data').valueAsDate = new Date();
@@ -1065,7 +1041,7 @@
                 if(confirmed) {
                     const result = await postData('Anotacions', novesAnotacions);
                     if (result.success) {
-                        if (!USE_MOCK_DATA) state.anotacions.push(...novesAnotacions);
+                        state.anotacions.push(...novesAnotacions);
                         showToast(`${novesAnotacions.length} anotacions guardades correctament!`);
                         handleDiariFilterChange(); // Reset table
                     }
