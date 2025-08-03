@@ -20,10 +20,22 @@
         <!-- Authentication Section -->
         <div id="auth-container" class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200 text-center mb-8">
             <h2 class="text-2xl font-semibold mb-4">Inicia la sessió a Google</h2>
-            <button id="authorize_button" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl shadow transition duration-300 ease-in-out transform hover:scale-105" disabled>
-                Autoritzar
-            </button>
-            <p id="auth-status" class="mt-4 text-gray-500">Carregant llibreries de Google...</p>
+            <!-- Login button for Google Identity Services -->
+            <div id="g_id_onload"
+                 data-client_id="134551406037-r4v2505iif2uqreoerjid61bcv4aktgl.apps.googleusercontent.com"
+                 data-login_uri="https://lromance.github.io/"
+                 data-callback="handleCredentialResponse">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="large"
+                 data-theme="outline"
+                 data-text="sign_in_with"
+                 data-shape="rectangular"
+                 data-logo_alignment="left"
+                 data-width="300">
+            </div>
+            <p id="auth-status" class="mt-4 text-gray-500">Espera un moment...</p>
         </div>
 
         <!-- Main Application Content -->
@@ -142,24 +154,20 @@
         </div>
     </div>
 
-    <!-- Google API Client Library -->
+    <!-- Google API Client Library and Google Identity Services -->
     <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script>
-        // Placeholders for your API credentials. You must replace these with your own.
+        // Placeholders for your API credentials.
         // Keep your CLIENT_ID and API_KEY secure and do not share them publicly.
-        // CLIENT_ID és l'identificador del client d'OAuth 2.0 que has creat a Google Cloud Console.
         const CLIENT_ID = '134551406037-r4v2505iif2uqreoerjid61bcv4aktgl.apps.googleusercontent.com';
-        // API_KEY és la clau d'API que has creat a Google Cloud Console.
-        // S'ha actualitzat la clau d'API amb la que has proporcionat.
         const API_KEY = 'AIzaSyD69lkn4BcjOaR3DFJZarcQcs8dgT4CYfU';
-        // SPREADSHEET_ID és l'ID del full de càlcul de Google.
         const SPREADSHEET_ID = '1wlvnGyvwsIReC_1bSkB2wo4UecJPNpOTs2ksB2n8Iqc';
         const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
         const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
 
         // UI elements
         const authContainer = document.getElementById('auth-container');
-        const authorizeButton = document.getElementById('authorize_button');
         const authStatus = document.getElementById('auth-status');
         const appContent = document.getElementById('app-content');
 
@@ -180,14 +188,57 @@
         let gapiInited = false;
 
         /**
-         * Loads the Google API client library.
+         * The new authentication flow with Google Identity Services.
+         * The `data-login_uri` must be the URL where the app is hosted.
+         * The `data-callback` must be defined globally.
          */
-        function gapiLoaded() {
-            gapi.load('client:auth2', initializeGapiClient);
+        window.handleCredentialResponse = async (response) => {
+            if (response && response.credential) {
+                // GIS does not return the same type of credential. We need to
+                // get an access token to use the gapi.client library.
+                const tokenResponse = await getAccessToken();
+                if (tokenResponse) {
+                    gapi.client.setToken(tokenResponse);
+                    updateSigninStatus(true);
+                }
+            }
+        };
+
+        /**
+         * Requests an access token after the user has signed in.
+         */
+        function getAccessToken() {
+            return new Promise((resolve, reject) => {
+                try {
+                    // Initialize the new Identity Services token client
+                    const client = google.accounts.oauth2.initTokenClient({
+                        client_id: CLIENT_ID,
+                        scope: SCOPES,
+                        callback: (tokenResponse) => {
+                            if (tokenResponse.access_token) {
+                                resolve(tokenResponse);
+                            } else {
+                                reject('Failed to get access token');
+                            }
+                        },
+                    });
+                    client.requestAccessToken();
+                } catch (err) {
+                    console.error("Error al obtenir el token d'accés:", err);
+                    reject(err);
+                }
+            });
         }
 
         /**
-         * Initializes the Google API client.
+         * Loads the Google API client library for Sheets.
+         */
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+
+        /**
+         * Initializes the Google API client library with the API Key.
          */
         async function initializeGapiClient() {
             try {
@@ -195,17 +246,8 @@
                     apiKey: API_KEY,
                     discoveryDocs: DISCOVERY_DOCS,
                 });
-                
-                // Initialize the GoogleAuth object
-                await gapi.auth2.init({
-                    clientId: CLIENT_ID,
-                    scope: SCOPES,
-                });
-                
                 gapiInited = true;
-                maybeEnableButtons();
-                updateSigninStatus();
-                gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus);
+                authStatus.textContent = "Si us plau, inicia la sessió per utilitzar l'aplicació.";
             } catch (err) {
                 console.error("Error al inicialitzar el client de GAPI:", err);
                 authStatus.textContent = "Error al carregar l'API de Google. Comprova la teva clau d'API.";
@@ -213,20 +255,9 @@
         }
         
         /**
-         * Enables the authorize button once both libraries are loaded.
-         */
-        function maybeEnableButtons() {
-            if (gapiInited) {
-                authorizeButton.disabled = false;
-                authStatus.textContent = "Llest per autoritzar.";
-            }
-        }
-        
-        /**
          * Update the UI based on the user's sign-in status.
          */
-        function updateSigninStatus() {
-            const isSignedIn = gapi.auth2.getAuthInstance().isSignedIn.get();
+        function updateSigninStatus(isSignedIn) {
             if (isSignedIn) {
                 authStatus.textContent = "Autenticació completada.";
                 appContent.classList.remove('hidden');
@@ -238,13 +269,6 @@
             }
         }
         
-        /**
-         * Handle button click to sign in the user.
-         */
-        authorizeButton.onclick = () => {
-            gapi.auth2.getAuthInstance().signIn();
-        };
-
         /**
          * Appends a new row to the specified Google Sheet.
          * @param {string} sheetName The name of the sheet (e.g., 'Grups').
