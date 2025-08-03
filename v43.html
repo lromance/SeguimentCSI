@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplicació de Seguiment d'Alumnes - CFA La Pau</title>
+    <title>*Aplicació de Seguiment d'Alumnes - CFA La Pau</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -822,8 +822,15 @@
         // --- ANOTACIONS TAB ---
         function initAnotacionsTab() {
             populateAnotacionsFilters();
-            document.getElementById('filter-curs').addEventListener('change', (e) => populateAnotacionsFilters(e.target.value));
-            document.getElementById('filter-ensenyament').addEventListener('change', (e) => populateAnotacionsFilters(document.getElementById('filter-curs').value, e.target.value));
+            document.getElementById('filter-curs').addEventListener('change', () => {
+                const curs = document.getElementById('filter-curs').value;
+                populateAnotacionsFilters(curs);
+            });
+            document.getElementById('filter-ensenyament').addEventListener('change', () => {
+                const curs = document.getElementById('filter-curs').value;
+                const ensenyament = document.getElementById('filter-ensenyament').value;
+                populateAnotacionsFilters(curs, ensenyament);
+            });
             document.getElementById('filter-alumne').addEventListener('change', handleAnotacionsFilterChange);
             document.getElementById('form-add-anotacio').addEventListener('submit', handleAddAnotacio);
             document.getElementById('btn-gemini').addEventListener('click', handleGeminiClick);
@@ -834,23 +841,26 @@
             const ensenyamentSelect = document.getElementById('filter-ensenyament');
             const alumneSelect = document.getElementById('filter-alumne');
 
+            const previousCurs = cursSelect.value;
+            const previousEnsenyament = ensenyamentSelect.value;
+
             if (!selectedCurs && !selectedEnsenyament) { // First load
                 const cursos = [...new Set(state.grups.map(g => g['Curs Acadèmic']))];
                 cursSelect.innerHTML = '<option value="">Tots els Cursos</option>' + cursos.sort().map(c => `<option value="${c}">${c}</option>`).join('');
             }
 
-            const currentSelectedCurs = selectedCurs || cursSelect.value;
+            const currentSelectedCurs = selectedCurs || previousCurs;
             
-            // Populate Ensenyament based on Curs
             if (currentSelectedCurs) {
                 const ensenyaments = [...new Set(state.grups.filter(g => g['Curs Acadèmic'] === currentSelectedCurs).map(g => g['Ensenyament']))];
                 ensenyamentSelect.innerHTML = '<option value="">Tots els Ensenyaments</option>' + ensenyaments.sort().map(e => `<option value="${e}">${e}</option>`).join('');
+                if (selectedCurs) ensenyamentSelect.value = selectedEnsenyament || "";
+                else ensenyamentSelect.value = previousEnsenyament;
             } else {
                 ensenyamentSelect.innerHTML = '<option value="">Tria un curs primer</option>';
             }
 
-            // Populate Alumne based on Curs and Ensenyament
-            const currentSelectedEnsenyament = selectedEnsenyament || ensenyamentSelect.value;
+            const currentSelectedEnsenyament = ensenyamentSelect.value;
             if (currentSelectedCurs && currentSelectedEnsenyament) {
                 const alumnes = [...new Set(state.matricules.filter(m => m.Curs === currentSelectedCurs && m.Ensenyament === currentSelectedEnsenyament).map(m => m.Alumne))];
                 alumneSelect.innerHTML = '<option value="">Tots els Alumnes</option>' + alumnes.sort().map(a => `<option value="${a}">${a}</option>`).join('');
@@ -881,7 +891,7 @@
             if (curs) {
                 const matriculesDelCurs = state.matricules.filter(m => m.Curs === curs);
                 const alumnesDelCurs = matriculesDelCurs.map(m => m.Alumne);
-                const ensenyamentsDelCurs = matriculesDelCurs.map(m => m.Ensenyament);
+                const ensenyamentsDelCurs = [...new Set(matriculesDelCurs.map(m => m.Ensenyament))];
                 filtered = filtered.filter(a => alumnesDelCurs.includes(a.Alumne) && ensenyamentsDelCurs.includes(a.Ensenyament));
             }
 
