@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CFA La Pau</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <!-- Font Awesome (Icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #1a202c;
+        }
+
+        /* Classes for tab styling */
+        .tab-button {
+            @apply p-4 text-gray-800 font-semibold hover:bg-gray-300 transition-all duration-300 ease-in-out rounded-full;
+        }
+
+        .tab-button.active {
+            @apply bg-white shadow-md border-b-2 border-indigo-600;
+        }
+
+        .tab-content {
+            display: none;
+            @apply p-8;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Custom modal for alerts */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    
+    <!-- Alerta de configuració de l'API (oculta si la URL està configurada) -->
+    <div id="api-config-alert" class="hidden fixed top-0 left-0 w-full p-4 bg-red-600 text-white text-center font-semibold z-50">
+        <p>
+            <i class="fas fa-exclamation-triangle mr-2"></i>
+            Error de configuració! Si us plau, substitueix "YOUR_GOOGLE_APPS_SCRIPT_URL_HERE" en el codi JavaScript amb la URL del teu Google Apps Script.
+        </p>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-8">
+        <!-- Header -->
+        <header class="text-center text-white py-8">
+            <h1 class="text-4xl md:text-5xl font-bold">CFA La Pau</h1>
+            <p class="mt-2 text-lg">Gestió de grups, alumnes i anotacions</p>
+        </header>
+
+        <!-- Navigation bar -->
+        <nav class="bg-gray-100 rounded-full shadow-lg p-2 mb-8">
+            <div class="flex justify-around">
+                <button id="groups-tab-btn" class="tab-button active px-6">
+                    <i class="fas fa-users mr-2"></i>Gestió de Grups
+                </button>
+                <button id="students-tab-btn" class="tab-button px-6">
+                    <i class="fas fa-user-graduate mr-2"></i>Gestió d'Alumnes
+                </button>
+                <button id="annotations-tab-btn" class="tab-button px-6">
+                    <i class="fas fa-clipboard-list mr-2"></i>Anotacions
+                </button>
+                <button id="diary-tab-btn" class="tab-button px-6">
+                    <i class="fas fa-calendar-alt mr-2"></i>Diari de Classe
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main content area with tabs -->
+        <main class="bg-white rounded-xl shadow-2xl overflow-hidden p-8">
+
+            <!-- Groups Tab -->
+            <div id="groups-tab" class="tab-content active">
+                <h2 class="text-3xl font-semibold mb-6 text-gray-800">Gestió de Grups</h2>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- List of Groups -->
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                        <h3 class="text-xl font-medium mb-4">Grups Existents</h3>
+                        <div id="groups-list" class="space-y-2">
+                            <!-- Groups will be inserted here by JavaScript -->
+                            <p class="text-gray-500">Carregant grups...</p>
+                        </div>
+                    </div>
+                    <!-- Form to add new Group -->
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                        <h3 class="text-xl font-medium mb-4">Afegir Nou Grup</h3>
+                        <form id="addGroupForm">
+                            <div class="mb-4">
+                                <label for="addGroupAcademicYear" class="block text-sm font-medium text-gray-700">Curs Acadèmic</label>
+                                <input type="text" id="addGroupAcademicYear" name="academicYear" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            </div>
+                            <div class="mb-4">
+                                <label for="addGroupCourseName" class="block text-sm font-medium text-gray-700">Ensenyament</label>
+                                <input type="text" id="addGroupCourseName" name="courseName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            </div>
+                            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300">
+                                <i class="fas fa-plus-circle mr-2"></i>Afegir Grup
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Group details tables (hidden by default) -->
+                <div id="group-details" class="mt-8 hidden">
+                    <h3 id="selected-group-title" class="text-2xl font-semibold mb-4"></h3>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="text-xl font-medium mb-4">Alumnes Matriculats</h4>
+                            <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="group-students-table-body" class="bg-white divide-y divide-gray-200">
+                                        <!-- Students will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-medium mb-4">Anotacions del Grup</h4>
+                            <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alumne</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipus</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Anotació</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="group-annotations-table-body" class="bg-white divide-y divide-gray-200">
+                                        <!-- Annotations will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Students Tab -->
+            <div id="students-tab" class="tab-content">
+                <h2 class="text-3xl font-semibold mb-6 text-gray-800">Gestió d'Alumnes</h2>
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- List of Students -->
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                        <h3 class="text-xl font-medium mb-4">Alumnes Existents</h3>
+                        <div id="students-list" class="space-y-2">
+                            <!-- Students will be inserted here by JavaScript -->
+                            <p class="text-gray-500">Carregant alumnes...</p>
+                        </div>
+                    </div>
+                    <!-- Form to add new Student -->
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                        <h3 class="text-xl font-medium mb-4">Afegir Nou Alumne</h3>
+                        <form id="addStudentForm">
+                            <div class="mb-4">
+                                <label for="addStudentName" class="block text-sm font-medium text-gray-700">Nom de l'alumne</label>
+                                <input type="text" id="addStudentName" name="studentName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            </div>
+                            <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300">
+                                <i class="fas fa-user-plus mr-2"></i>Afegir Alumne
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Student details tables (hidden by default) -->
+                <div id="student-details" class="mt-8 hidden">
+                    <h3 id="selected-student-title" class="text-2xl font-semibold mb-4"></h3>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div>
+                            <h4 class="text-xl font-medium mb-4">Grups Matriculats</h4>
+                            <div class="bg-white shadow-md rounded-lg overflow-hidden">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Curs</th>
+                                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ensenyament</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="student-groups-table-body" class="bg-white divide-y divide-gray-200">
+                                        <!-- Groups will be inserted here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 class="text-xl font-medium mb-4">Afegir Matrícula</h4>
+                            <form id="addEnrollmentForm" class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                                <div class="mb-4">
+                                    <label for="enrollmentAcademicYear" class="block text-sm font-medium text-gray-700">Curs Acadèmic</label>
+                                    <select id="enrollmentAcademicYear" name="academicYear" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                        <option value="">Selecciona un curs</option>
+                                    </select>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="enrollmentCourseName" class="block text-sm font-medium text-gray-700">Ensenyament</label>
+                                    <select id="enrollmentCourseName" name="courseName" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                        <option value="">Selecciona un ensenyament</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300">
+                                    <i class="fas fa-link mr-2"></i>Afegir Matrícula
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Annotations Tab -->
+            <div id="annotations-tab" class="tab-content">
+                <h2 class="text-3xl font-semibold mb-6 text-gray-800">Anotacions</h2>
+                <div class="bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                    <h3 class="text-xl font-medium mb-4">Filtres</h3>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="filterAcademicYear" class="block text-sm font-medium text-gray-700">Curs Acadèmic</label>
+                            <select id="filterAcademicYear" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">Tots</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filterCourseName" class="block text-sm font-medium text-gray-700">Ensenyament</label>
+                            <select id="filterCourseName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">Tots</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="filterStudentName" class="block text-sm font-medium text-gray-700">Alumne</label>
+                            <select id="filterStudentName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">Tots</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow-md rounded-lg overflow-hidden mb-6">
+                    <h3 class="text-xl font-medium p-4 border-b">Anotacions Filtrades</h3>
+                    <div class="p-4">
+                        <div class="flex justify-end mb-4">
+                            <button id="generateCommentBtn" class="bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700 transition-colors duration-300">
+                                <i class="fas fa-magic mr-2"></i>Comentari amb IA
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alumne</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Curs</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ensenyament</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipus</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Anotació</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="filtered-annotations-table-body" class="bg-white divide-y divide-gray-200">
+                                    <!-- Annotations will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                    <h3 class="text-xl font-medium mb-4">Afegir Nova Anotació</h3>
+                    <form id="addAnnotationForm">
+                        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                            <div>
+                                <label for="anno_academicYear" class="block text-sm font-medium text-gray-700">Curs</label>
+                                <input type="text" id="anno_academicYear" name="academicYear" readonly class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-200">
+                            </div>
+                            <div>
+                                <label for="anno_courseName" class="block text-sm font-medium text-gray-700">Ensenyament</label>
+                                <input type="text" id="anno_courseName" name="courseName" readonly class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-200">
+                            </div>
+                            <div>
+                                <label for="anno_studentName" class="block text-sm font-medium text-gray-700">Alumne</label>
+                                <input type="text" id="anno_studentName" name="studentName" readonly class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-200">
+                            </div>
+                            <div>
+                                <label for="anno_date" class="block text-sm font-medium text-gray-700">Data</label>
+                                <input type="date" id="anno_date" name="date" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            </div>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label for="anno_type" class="block text-sm font-medium text-gray-700">Tipus</label>
+                                <select id="anno_type" name="type" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                    <option value="academic">Acadèmica</option>
+                                    <option value="social">Social</option>
+                                    <option value="absenteeism">Absentisme</option>
+                                    <option value="leave">Baixa</option>
+                                    <option value="referral">Derivació</option>
+                                    <option value="tutoring">Tutoria</option>
+                                    <option value="default">Altres</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="anno_annotation" class="block text-sm font-medium text-gray-700">Anotació</label>
+                                <textarea id="anno_annotation" name="annotation" rows="3" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"></textarea>
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors duration-300">
+                            <i class="fas fa-save mr-2"></i>Guardar Anotació
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Class Diary Tab -->
+            <div id="diary-tab" class="tab-content">
+                <h2 class="text-3xl font-semibold mb-6 text-gray-800">Diari de Classe</h2>
+                <div class="bg-gray-50 p-6 rounded-lg shadow-inner mb-6">
+                    <h3 class="text-xl font-medium mb-4">Seleccionar Grup i Data</h3>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div>
+                            <label for="diaryAcademicYear" class="block text-sm font-medium text-gray-700">Curs Acadèmic</label>
+                            <select id="diaryAcademicYear" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">Selecciona un curs</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="diaryCourseName" class="block text-sm font-medium text-gray-700">Ensenyament</label>
+                            <select id="diaryCourseName" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="">Selecciona un ensenyament</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="diaryDate" class="block text-sm font-medium text-gray-700">Data</label>
+                            <input type="date" id="diaryDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white shadow-md rounded-lg p-6">
+                    <h3 class="text-xl font-medium mb-4">Anotacions del Diari</h3>
+                    <div class="flex items-center mb-4 space-x-4">
+                        <label for="diaryStudentSelector" class="text-sm font-medium text-gray-700">Duplicar anotació per a:</label>
+                        <select id="diaryStudentSelector" class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                            <!-- Students will be populated here -->
+                        </select>
+                        <button id="duplicateRowBtn" class="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 transition-colors duration-300">
+                            <i class="fas fa-clone mr-2"></i>Duplicar
+                        </button>
+                    </div>
+
+                    <div class="overflow-x-auto mb-4">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alumne</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/3">Tipus</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/2">Anotació</th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="diary-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Diary rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <button id="saveDiaryBtn" class="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors duration-300">
+                        <i class="fas fa-calendar-check mr-2"></i>Guardar Anotacions del Diari
+                    </button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modal for loading, success, error, and Gemini output -->
+    <div id="modal-container" class="modal-overlay hidden">
+        <div id="modal-box" class="modal-content">
+            <!-- Modal content will be inserted here -->
+        </div>
+    </div>
+
+
+    <script>
+        // API Configuration - IMPORTANT: Change this URL to your new deployed Google Apps Script URL.
+        const GOOGLE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbw7Q1iiS9ZfjoAcpGebdqMZZuZqDhHS3n5v4Cp7isuD-E5_q0xyln3C6JK2yzPXiBY/exec";
+        
+        // Global data storage
+        let groups = [];
+        let students = [];
+        let enrollments = [];
+        let annotations = [];
+        let currentTab = 'groups-tab';
+
+        // Keep track of selected group and student for detail views and forms
+        let selectedGroup = null;
+        let selectedStudent = null;
+
+        // Palette de colors for annotation types
+        const typeColors = {
+            'academic': 'bg-blue-100 text-blue-800',
+            'social': 'bg-purple-100 text-purple-800',
+            'absenteeism': 'bg-yellow-100 text-yellow-800',
+            'leave': 'bg-red-100 text-red-800',
+            'referral': 'bg-green-100 text-green-800',
+            'tutoring': 'bg-cyan-100 text-cyan-800',
+            'default': 'bg-gray-200 text-gray-800',
+        };
+
+        // DOM Elements
+        const groupsList = document.getElementById('groups-list');
+        const studentsList = document.getElementById('students-list');
+
+        const filterAcademicYear = document.getElementById('filterAcademicYear');
+        const filterCourseName = document.getElementById('filterCourseName');
+        const filterStudentName = document.getElementById('filterStudentName');
+        const filteredAnnotationsTableBody = document.getElementById('filtered-annotations-table-body');
+        const generateCommentBtn = document.getElementById('generateCommentBtn');
+
+        const annoAcademicYear = document.getElementById('anno_academicYear');
+        const annoCourseName = document.getElementById('anno_courseName');
+        const annoStudentName = document.getElementById('anno_studentName');
+        const addAnnotationForm = document.getElementById('addAnnotationForm');
+        
+        const enrollmentAcademicYearSelector = document.getElementById('enrollmentAcademicYear');
+        const enrollmentCourseNameSelector = document.getElementById('enrollmentCourseName');
+
+        const diaryAcademicYear = document.getElementById('diaryAcademicYear');
+        const diaryCourseName = document.getElementById('diaryCourseName');
+        const diaryDate = document.getElementById('diaryDate');
+        const diaryTableBody = document.getElementById('diary-table-body');
+        const diaryStudentSelector = document.getElementById('diaryStudentSelector');
+        const duplicateRowBtn = document.getElementById('duplicateRowBtn');
+        const saveDiaryBtn = document.getElementById('saveDiaryBtn');
+        const addGroupForm = document.getElementById('addGroupForm');
+        const addStudentForm = document.getElementById('addStudentForm');
+        const addEnrollmentForm = document.getElementById('addEnrollmentForm');
+
+        const modalContainer = document.getElementById('modal-container');
+        const modalBox = document.getElementById('modal-box');
+        
+        const apiConfigAlert = document.getElementById('api-config-alert');
+        const tabButtons = document.querySelectorAll('.tab-button');
+
+
+        // ============================
+        //      MODAL FUNCTIONS
+        // ============================
+
+        // Shows a loading modal
+        function showLoading() {
+            modalBox.innerHTML = `
+                <div class="flex flex-col items-center p-4">
+                    <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500 mb-4"></div>
+                    <p class="text-xl font-semibold text-gray-700">Carregant...</p>
+                </div>
+            `;
+            modalContainer.classList.remove('hidden');
+        }
+
+        // Hides the modal
+        function hideModal() {
+            modalContainer.classList.add('hidden');
+            modalBox.innerHTML = '';
+        }
+
+        // Shows a modal with a success message
+        function showSuccess(message) {
+            modalBox.innerHTML = `
+                <div class="p-4">
+                    <div class="text-green-500 text-4xl mb-4"><i class="fas fa-check-circle"></i></div>
+                    <p class="text-xl font-semibold text-gray-700">${message}</p>
+                    <button onclick="hideModal()" class="mt-4 bg-green-500 text-white px-6 py-2 rounded-md hover:bg-green-600 transition-colors duration-300">Tancar</button>
+                </div>
+            `;
+            modalContainer.classList.remove('hidden');
+        }
+        
+        // Shows a modal with an error message
+        function showError(message) {
+            modalBox.innerHTML = `
+                <div class="p-4">
+                    <div class="text-red-500 text-4xl mb-4"><i class="fas fa-times-circle"></i></div>
+                    <p class="text-xl font-semibold text-gray-700">${message}</p>
+                    <button onclick="hideModal()" class="mt-4 bg-red-500 text-white px-6 py-2 rounded-md hover:bg-red-600 transition-colors duration-300">Tancar</button>
+                </div>
+            `;
+            modalContainer.classList.remove('hidden');
+        }
+
+        // Shows a modal with Gemini's output
+        function showGeminiOutput(text) {
+            modalBox.innerHTML = `
+                <div class="p-4 text-left">
+                    <h3 class="text-2xl font-bold mb-4">Comentari d'IA</h3>
+                    <div class="bg-gray-100 p-4 rounded-lg overflow-y-auto max-h-96">
+                        <p class="whitespace-pre-wrap">${text}</p>
+                    </div>
+                    <button onclick="hideModal()" class="mt-4 bg-purple-600 text-white px-6 py-2 rounded-md hover:bg-purple-700 transition-colors duration-300">Tancar</button>
+                </div>
+            `;
+            modalContainer.classList.remove('hidden');
+        }
+        
+        // Shows a confirmation modal
+        function showConfirmation(message, onConfirmCallback) {
+            modalBox.innerHTML = `
+                <div class="p-4">
+                    <div class="text-yellow-500 text-4xl mb-4"><i class="fas fa-exclamation-triangle"></i></div>
+                    <p class="text-xl font-semibold text-gray-700">${message}</p>
+                    <div class="mt-4 flex justify-center space-x-4">
+                        <button onclick="hideModal()" class="bg-gray-300 text-gray-800 px-6 py-2 rounded-md hover:bg-gray-400 transition-colors duration-300">Cancel·lar</button>
+                        <button id="confirm-button" class="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700 transition-colors duration-300">Confirmar</button>
+                    </div>
+                </div>
+            `;
+            modalContainer.classList.remove('hidden');
+            document.getElementById('confirm-button').onclick = onConfirmCallback;
+        }
+
+        // ============================
+        //      API FUNCTIONS
+        // ============================
+
+        // Utility function for API calls
+        async function fetchData(action, method = 'GET', data = null) {
+            // Check for the placeholder URL
+            if (!GOOGLE_SHEET_API_URL || GOOGLE_SHEET_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) {
+                apiConfigAlert.classList.remove('hidden');
+                throw new Error("Google Apps Script URL is not configured.");
+            }
+
+            const url = `${GOOGLE_SHEET_API_URL}?action=${action}`;
+            const options = {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            };
+
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    throw new Error(`Error en la petició: ${response.status} ${response.statusText}`);
+                }
+                const result = await response.json();
+                if (result.status === 'success') {
+                    return result.data;
+                } else {
+                    throw new Error(result.message || "Error desconegut en l'API.");
+                }
+            } catch (error) {
+                // Better error handling for the "Failed to fetch" network error
+                if (error instanceof TypeError && error.message === 'Failed to fetch') {
+                    showError("No s'ha pogut connectar amb l'API. Verifica que la URL del Google Apps Script sigui correcta i estigui desplegada públicament.");
+                } else {
+                    showError(`Error en interactuar amb l'API: ${error.message}`);
+                }
+                console.error('API Error:', error);
+                throw error;
+            }
+        }
+
+        // ============================
+        //      DATA LOADING
+        // ============================
+
+        // Load all data from the spreadsheet
+        async function loadAllData() {
+            // Check the URL first
+            if (GOOGLE_SHEET_API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_URL_HERE")) {
+                apiConfigAlert.classList.remove('hidden');
+                // Don't attempt to load data if the URL is not configured
+                return;
+            } else {
+                apiConfigAlert.classList.add('hidden');
+            }
+
+            showLoading();
+            try {
+                const allData = await Promise.all([
+                    fetchData('getGroups'),
+                    fetchData('getStudents'),
+                    fetchData('getEnrollments'),
+                    fetchData('getAnnotations')
+                ]);
+
+                groups = allData[0];
+                students = allData[1];
+                enrollments = allData[2];
+                annotations = allData[3];
+                
+                renderGroupsList();
+                renderStudentsList();
+                populateFilters();
+                populateEnrollmentSelectors();
+                populateDiarySelectors();
+                
+                filterAnnotations(); // Initial filter
+                hideModal(); // Hide loading modal before showing success
+                showSuccess("Dades carregades correctament.");
+            } catch (error) {
+                console.error("Error loading data:", error);
+                // The showError modal is now called inside fetchData, so we don't need to call it here again
+            } finally {
+                // Ensure modal is hidden even if there's an uncaught error
+                hideModal();
+            }
+        }
+
+        // ============================
+        //      RENDERING FUNCTIONS
+        // ============================
+
+        // Render groups list
+        function renderGroupsList() {
+            groupsList.innerHTML = groups.map(group => `
+                <div class="flex items-center justify-between p-3 bg-white rounded-md shadow-sm border border-gray-200 cursor-pointer hover:bg-indigo-50 transition-colors duration-200"
+                    data-academic-year="${group.academicYear}" data-course-name="${group.courseName}">
+                    <span><i class="fas fa-users mr-2 text-indigo-500"></i>${group.academicYear} / ${group.courseName}</span>
+                    <i class="fas fa-chevron-right text-gray-400"></i>
+                </div>
+            `).join('');
+            if (groups.length === 0) {
+                groupsList.innerHTML = '<p class="text-gray-500">No hi ha grups disponibles.</p>';
+            }
+        }
+        
+        // Render students list
+        function renderStudentsList() {
+            studentsList.innerHTML = students.map(student => `
+                <div class="flex items-center justify-between p-3 bg-white rounded-md shadow-sm border border-gray-200 cursor-pointer hover:bg-indigo-50 transition-colors duration-200"
+                    data-student-name="${student.name}">
+                    <span><i class="fas fa-user-graduate mr-2 text-indigo-500"></i>${student.name}</span>
+                    <i class="fas fa-chevron-right text-gray-400"></i>
+                </div>
+            `).join('');
+            if (students.length === 0) {
+                studentsList.innerHTML = '<p class="text-gray-500">No hi ha alumnes disponibles.</p>';
+            }
+        }
+
+        // Render filtered annotations table
+        function renderFilteredAnnotations(filtered) {
+            filteredAnnotationsTableBody.innerHTML = filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).map(anno => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${anno.studentName}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${anno.academicYear}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${anno.courseName}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${typeColors[anno.type] || typeColors.default}">
+                            ${anno.type === 'academic' ? 'Acadèmica' : anno.type === 'social' ? 'Social' : anno.type === 'absenteeism' ? 'Absentisme' : anno.type === 'leave' ? 'Baixa' : anno.type === 'referral' ? 'Derivació' : anno.type === 'tutoring' ? 'Tutoria' : 'Altres'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${anno.date}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 max-w-sm">${anno.annotation}</td>
+                </tr>
+            `).join('');
+            if (filtered.length === 0) {
+                 filteredAnnotationsTableBody.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">No s\'han trobat anotacions.</td></tr>';
+            }
+        }
+
+        // Populates filter dropdowns
+        function populateFilters() {
+            const academicYears = [...new Set(groups.map(g => g.academicYear))].sort();
+            const courseNames = [...new Set(groups.map(g => g.courseName))].sort();
+            const studentNames = [...new Set(students.map(s => s.name))].sort();
+
+            filterAcademicYear.innerHTML = '<option value="">Tots</option>' + academicYears.map(year => `<option value="${year}">${year}</option>`).join('');
+            filterCourseName.innerHTML = '<option value="">Tots</option>' + courseNames.map(course => `<option value="${course}">${course}</option>`).join('');
+            filterStudentName.innerHTML = '<option value="">Tots</option>' + studentNames.map(student => `<option value="${student}">${student}</option>`).join('');
+        }
+
+        // Populates enrollment dropdowns
+        function populateEnrollmentSelectors() {
+            const academicYears = [...new Set(groups.map(g => g.academicYear))].sort();
+            const courseNames = [...new Set(groups.map(g => g.courseName))].sort();
+
+            enrollmentAcademicYearSelector.innerHTML = '<option value="">Selecciona un curs</option>' + academicYears.map(year => `<option value="${year}">${year}</option>`).join('');
+            enrollmentCourseNameSelector.innerHTML = '<option value="">Selecciona un ensenyament</option>' + courseNames.map(course => `<option value="${course}">${course}</option>`).join('');
+        }
+
+        // Populates diary dropdowns
+        function populateDiarySelectors() {
+            const academicYears = [...new Set(groups.map(g => g.academicYear))].sort();
+            const courseNames = [...new Set(groups.map(g => g.courseName))].sort();
+            
+            diaryAcademicYear.innerHTML = '<option value="">Selecciona un curs</option>' + academicYears.map(year => `<option value="${year}">${year}</option>`).join('');
+            diaryCourseName.innerHTML = '<option value="">Selecciona un ensenyament</option>' + courseNames.map(course => `<option value="${course}">${course}</option>`).join('');
+            
+            diaryAcademicYear.value = '';
+            diaryCourseName.value = '';
+            diaryDate.valueAsDate = new Date();
+        }
+
+        // ============================
+        //      TAB NAVIGATION
+        // ============================
+
+        // Shows a specific tab and hides others
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+
+            document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`[id="${tabId}-btn"]`).classList.add('active');
+
+            currentTab = tabId;
+
+            // Reset selected items when changing tabs
+            selectedGroup = null;
+            selectedStudent = null;
+            document.getElementById('group-details').classList.add('hidden');
+            document.getElementById('student-details').classList.add('hidden');
+        }
+
+        // ============================
+        //      GROUP MANAGEMENT
+        // ============================
+
+        // Handle group selection
+        function selectGroup(academicYear, courseName, element) {
+            // Remove 'selected' style from all items
+            document.querySelectorAll('#groups-list > div').forEach(item => item.classList.remove('bg-indigo-100'));
+            // Add 'selected' style to the clicked item
+            element.classList.add('bg-indigo-100');
+
+            selectedGroup = { academicYear, courseName };
+            document.getElementById('selected-group-title').textContent = `Detalls del Grup: ${academicYear} / ${courseName}`;
+
+            const studentsInGroup = enrollments.filter(e => e.academicYear === academicYear && e.courseName === courseName)
+                                            .map(e => e.studentName)
+                                            .sort();
+            
+            const annotationsInGroup = annotations.filter(a => a.academicYear === academicYear && a.courseName === courseName)
+                                                .sort((a, b) => {
+                                                    if (a.studentName !== b.studentName) {
+                                                        return a.studentName.localeCompare(b.studentName);
+                                                    }
+                                                    return new Date(a.date) - new Date(b.date);
+                                                });
+            
+            renderGroupStudents(studentsInGroup);
+            renderGroupAnnotations(annotationsInGroup);
+            
+            document.getElementById('group-details').classList.remove('hidden');
+        }
+
+        // Render students for the selected group
+        function renderGroupStudents(studentsInGroup) {
+            const tableBody = document.getElementById('group-students-table-body');
+            tableBody.innerHTML = studentsInGroup.map(studentName => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${studentName}</td>
+                </tr>
+            `).join('');
+            if (studentsInGroup.length === 0) {
+                tableBody.innerHTML = '<tr><td class="px-6 py-4 text-center text-gray-500">No hi ha alumnes matriculats en aquest grup.</td></tr>';
+            }
+        }
+
+        // Render annotations for the selected group
+        function renderGroupAnnotations(annotationsInGroup) {
+            const tableBody = document.getElementById('group-annotations-table-body');
+            tableBody.innerHTML = annotationsInGroup.map(anno => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${anno.studentName}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${typeColors[anno.type] || typeColors.default}">
+                            ${anno.type === 'academic' ? 'Acadèmica' : anno.type === 'social' ? 'Social' : anno.type === 'absenteeism' ? 'Absentisme' : anno.type === 'leave' ? 'Baixa' : anno.type === 'referral' ? 'Derivació' : anno.type === 'tutoring' ? 'Tutoria' : 'Altres'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${anno.date}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 max-w-sm">${anno.annotation}</td>
+                </tr>
+            `).join('');
+            if (annotationsInGroup.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">No hi ha anotacions per a aquest grup.</td></tr>';
+            }
+        }
+        
+        // Form submission for adding a new group
+        addGroupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const academicYear = form.addGroupAcademicYear.value.trim();
+            const courseName = form.addGroupCourseName.value.trim();
+
+            if (!academicYear || !courseName) {
+                showError("Si us plau, omple tots els camps.");
+                return;
+            }
+
+            const newGroup = { academicYear, courseName };
+            
+            showConfirmation(`Estàs segur que vols afegir el grup "${academicYear} / ${courseName}"?`, async () => {
+                showLoading();
+                try {
+                    await fetchData('addGroup', 'POST', newGroup);
+                    await loadAllData();
+                    form.reset();
+                    showSuccess("Grup afegit correctament.");
+                } catch (error) {
+                    console.error("Error adding group:", error);
+                } finally {
+                    hideModal();
+                }
+            });
+        });
+
+        // ============================
+        //      STUDENT MANAGEMENT
+        // ============================
+        
+        // Handle student selection
+        function selectStudent(studentName, element) {
+            document.querySelectorAll('#students-list > div').forEach(item => item.classList.remove('bg-indigo-100'));
+            element.classList.add('bg-indigo-100');
+
+            selectedStudent = { name: studentName };
+            document.getElementById('selected-student-title').textContent = `Detalls de l'Alumne: ${studentName}`;
+
+            const groupsForStudent = enrollments.filter(e => e.studentName === studentName);
+            
+            renderStudentGroups(groupsForStudent);
+            
+            document.getElementById('student-details').classList.remove('hidden');
+
+            // Set student name in the annotation form
+            annoStudentName.value = studentName;
+        }
+
+        // Render groups for the selected student
+        function renderStudentGroups(groupsForStudent) {
+            const tableBody = document.getElementById('student-groups-table-body');
+            tableBody.innerHTML = groupsForStudent.map(group => `
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${group.academicYear}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${group.courseName}</td>
+                </tr>
+            `).join('');
+            if (groupsForStudent.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="2" class="px-6 py-4 text-center text-gray-500">Aquest alumne no està matriculat en cap grup.</td></tr>';
+            }
+        }
+
+        // Form submission for adding a new student
+        addStudentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const studentName = form.addStudentName.value.trim();
+
+            if (!studentName) {
+                showError("Si us plau, introdueix un nom per a l'alumne.");
+                return;
+            }
+            
+            const newStudent = { name: studentName };
+            showConfirmation(`Estàs segur que vols afegir a l'alumne "${studentName}"?`, async () => {
+                showLoading();
+                try {
+                    await fetchData('addStudent', 'POST', newStudent);
+                    await loadAllData();
+                    form.reset();
+                    showSuccess("Alumne afegit correctament.");
+                } catch (error) {
+                    console.error("Error adding student:", error);
+                } finally {
+                    hideModal();
+                }
+            });
+        });
+        
+        // Form submission for adding a new enrollment
+        addEnrollmentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const academicYear = form.enrollmentAcademicYear.value;
+            const courseName = form.enrollmentCourseName.value;
+
+            if (!academicYear || !courseName || !selectedStudent) {
+                showError("Si us plau, selecciona un alumne i un grup.");
+                return;
+            }
+
+            const newEnrollment = {
+                academicYear,
+                courseName,
+                studentName: selectedStudent.name
+            };
+
+            showConfirmation(`Estàs segur que vols matricular a "${selectedStudent.name}" en el grup "${academicYear} / ${courseName}"?`, async () => {
+                showLoading();
+                try {
+                    await fetchData('addEnrollment', 'POST', newEnrollment);
+                    await loadAllData();
+                    showSuccess("Matrícula afegida correctament.");
+                } catch (error) {
+                    console.error("Error adding enrollment:", error);
+                } finally {
+                    hideModal();
+                }
+            });
+        });
+
+        // ============================
+        //      ANNOTATION MANAGEMENT
+        // ============================
+
+        // Handle filter changes
+        filterAcademicYear.addEventListener('change', filterAnnotations);
+        filterCourseName.addEventListener('change', filterAnnotations);
+        filterStudentName.addEventListener('change', filterAnnotations);
+
+        function filterAnnotations() {
+            const academicYear = filterAcademicYear.value;
+            const courseName = filterCourseName.value;
+            const studentName = filterStudentName.value;
+
+            const filtered = annotations.filter(anno => {
+                const matchYear = !academicYear || anno.academicYear === academicYear;
+                const matchCourse = !courseName || anno.courseName === courseName;
+                const matchStudent = !studentName || anno.studentName === studentName;
+                return matchYear && matchCourse && matchStudent;
+            });
+            
+            // If only one student is selected, pre-fill the form
+            if (studentName) {
+                annoStudentName.value = studentName;
+                if (academicYear && courseName) {
+                    const isStudentInGroup = enrollments.some(e => e.studentName === studentName && e.academicYear === academicYear && e.courseName === courseName);
+                    if (isStudentInGroup) {
+                        annoAcademicYear.value = academicYear;
+                        annoCourseName.value = courseName;
+                    } else {
+                        annoAcademicYear.value = '';
+                        annoCourseName.value = '';
+                    }
+                } else {
+                    annoAcademicYear.value = '';
+                    annoCourseName.value = '';
+                }
+            } else {
+                annoStudentName.value = '';
+                annoAcademicYear.value = '';
+                annoCourseName.value = '';
+            }
+
+            renderFilteredAnnotations(filtered);
+        }
+        
+        // Form submission for adding a new annotation
+        addAnnotationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const newAnnotation = {
+                academicYear: annoAcademicYear.value,
+                courseName: annoCourseName.value,
+                studentName: annoStudentName.value,
+                date: form.anno_date.value,
+                type: form.anno_type.value,
+                annotation: form.anno_annotation.value
+            };
+            
+            if (!newAnnotation.academicYear || !newAnnotation.courseName || !newAnnotation.studentName) {
+                showError("Si us plau, selecciona un alumne i un grup usant els filtres.");
+                return;
+            }
+            
+            showConfirmation(`Estàs segur que vols guardar aquesta anotació?`, async () => {
+                showLoading();
+                try {
+                    await fetchData('addAnnotation', 'POST', newAnnotation);
+                    await loadAllData(); // Reload all data to update tables
+                    form.reset();
+                    showSuccess("Anotació guardada correctament.");
+                } catch (error) {
+                    console.error("Error adding annotation:", error);
+                } finally {
+                    hideModal();
+                }
+            });
+        });
+
+        // Gemini API call for generating comment, now handled by GAS
+        generateCommentBtn.addEventListener('click', async () => {
+            const academicYear = filterAcademicYear.value;
+            const courseName = filterCourseName.value;
+            const studentName = filterStudentName.value;
+            
+            if (!studentName) {
+                showError("Si us plau, selecciona un alumne per generar un comentari.");
+                return;
+            }
+            
+            const studentAnnotations = annotations.filter(a => a.studentName === studentName);
+
+            if (studentAnnotations.length === 0) {
+                showError("No hi ha anotacions per a aquest alumne per generar un comentari.");
+                return;
+            }
+
+            showLoading();
+            try {
+                // Pass annotations to the GAS script via a POST request
+                const result = await fetchData('generateGeminiComment', 'POST', { annotations: studentAnnotations });
+                showGeminiOutput(result);
+            } catch (error) {
+                console.error('Error al generar el resum amb Gemini:', error);
+                showError('No s\'ha pogut generar el resum. Verifica la teva clau d\'API a Google Apps Script.');
+            } finally {
+                // The modal is handled by showGeminiOutput or showError, so we don't need a separate hideModal here.
+            }
+        });
+
+        // ============================
+        //      DIARY MANAGEMENT
+        // ============================
+
+        diaryAcademicYear.addEventListener('change', updateDiaryTable);
+        diaryCourseName.addEventListener('change', updateDiaryTable);
+
+        // Update the diary table with students from the selected group
+        function updateDiaryTable() {
+            const academicYear = diaryAcademicYear.value;
+            const courseName = diaryCourseName.value;
+            diaryTableBody.innerHTML = '';
+            diaryStudentSelector.innerHTML = '';
+
+            if (academicYear && courseName) {
+                const studentsInGroup = enrollments.filter(e => e.academicYear === academicYear && e.courseName === courseName)
+                                                .map(e => e.studentName)
+                                                .sort();
+                
+                studentsInGroup.forEach(studentName => {
+                    addDiaryRow(studentName);
+                    const option = document.createElement('option');
+                    option.value = studentName;
+                    option.textContent = studentName;
+                    diaryStudentSelector.appendChild(option);
+                });
+            }
+        }
+
+        // Add a new row to the diary table
+        function addDiaryRow(studentName, annotationType = 'academic', annotationText = '') {
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${studentName}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <select class="block w-full rounded-md border-gray-300 shadow-sm text-sm p-1">
+                        <option value="academic" ${annotationType === 'academic' ? 'selected' : ''}>Acadèmica</option>
+                        <option value="social" ${annotationType === 'social' ? 'selected' : ''}>Social</option>
+                        <option value="absenteeism" ${annotationType === 'absenteeism' ? 'selected' : ''}>Absentisme</option>
+                        <option value="leave" ${annotationType === 'leave' ? 'selected' : ''}>Baixa</option>
+                        <option value="referral" ${annotationType === 'referral' ? 'selected' : ''}>Derivació</option>
+                        <option value="tutoring" ${annotationType === 'tutoring' ? 'selected' : ''}>Tutoria</option>
+                        <option value="default" ${annotationType === 'default' ? 'selected' : ''}>Altres</option>
+                    </select>
+                </td>
+                <td class="px-6 py-4">
+                    <input type="text" value="${annotationText}" class="block w-full rounded-md border-gray-300 shadow-sm text-sm p-1">
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button type="button" onclick="this.closest('tr').remove()" class="text-red-600 hover:text-red-900 transition-colors duration-200">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            `;
+            diaryTableBody.appendChild(newRow);
+        }
+
+        // Duplicates a row in the diary table
+        duplicateRowBtn.addEventListener('click', () => {
+            const studentName = diaryStudentSelector.value;
+            if (studentName) {
+                addDiaryRow(studentName);
+            }
+        });
+
+        // Save all annotations from the diary
+        saveDiaryBtn.addEventListener('click', async () => {
+            const academicYear = diaryAcademicYear.value;
+            const courseName = diaryCourseName.value;
+            const date = diaryDate.value;
+
+            if (!academicYear || !courseName || !date) {
+                showError("Si us plau, selecciona un grup i una data.");
+                return;
+            }
+
+            const rows = Array.from(diaryTableBody.querySelectorAll('tr'));
+            const annotationsToSave = [];
+
+            for (const row of rows) {
+                const studentName = row.cells[0].textContent.trim();
+                const type = row.querySelector('select').value;
+                const annotation = row.querySelector('input').value.trim();
+
+                if (annotation) {
+                    annotationsToSave.push({
+                        academicYear,
+                        courseName,
+                        studentName,
+                        date,
+                        type,
+                        annotation
+                    });
+                }
+            }
+
+            if (annotationsToSave.length === 0) {
+                showError("No hi ha anotacions per desar.");
+                return;
+            }
+
+            showConfirmation(`Es guardaran ${annotationsToSave.length} anotacions. Vols continuar?`, async () => {
+                showLoading();
+                try {
+                    for (const anno of annotationsToSave) {
+                        await fetchData('addAnnotation', 'POST', anno);
+                    }
+                    await loadAllData();
+                    showSuccess("Anotacions del diari guardades correctament.");
+                } catch (error) {
+                    console.error("Error saving diary annotations:", error);
+                    showError("Va ocórrer un error en guardar les anotacions. Torna-ho a intentar.");
+                } finally {
+                    hideModal();
+                }
+            });
+        });
+        
+        // ============================
+        //      EVENT LISTENERS
+        // ============================
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAllData();
+            
+            // Tab navigation listeners
+            tabButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const tabId = e.currentTarget.id.replace('-btn', '');
+                    showTab(tabId);
+                });
+            });
+            
+            // Group list listeners
+            groupsList.addEventListener('click', (e) => {
+                const groupDiv = e.target.closest('div[data-academic-year]');
+                if (groupDiv) {
+                    const academicYear = groupDiv.dataset.academicYear;
+                    const courseName = groupDiv.dataset.courseName;
+                    selectGroup(academicYear, courseName, groupDiv);
+                }
+            });
+            
+            // Student list listeners
+            studentsList.addEventListener('click', (e) => {
+                const studentDiv = e.target.closest('div[data-student-name]');
+                if (studentDiv) {
+                    const studentName = studentDiv.dataset.studentName;
+                    selectStudent(studentName, studentDiv);
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
