@@ -451,7 +451,7 @@
             if (isSignedIn) {
                 authContainer.classList.add('hidden');
                 appContent.classList.remove('hidden');
-                await initializeApp(); // *** THIS WAS THE FIX ***
+                await initializeApp();
             }
         }
 
@@ -536,7 +536,7 @@
             [state.grups, state.alumnes, state.matricules, state.anotacions] = await Promise.all([
                 fetchData('Grups'),
                 fetchData('Alumnes'),
-                fetchData('Matricules'),
+                fetchData('Matrícules'),
                 fetchData('Anotacions')
             ]);
             
@@ -761,7 +761,7 @@
             const ensenyament = document.getElementById('matricula-ensenyament').value;
             const newMatricula = { 'Curs': curs, 'Ensenyament': ensenyament, 'Alumne': selectedAlumneName };
             
-            const result = await postData('Matricules', newMatricula);
+            const result = await postData('Matrícules', newMatricula);
             if(result.success) {
                 state.matricules.push(newMatricula);
                 handleAlumneSelection(selectedAlumneName); // Refresh the list
