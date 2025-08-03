@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>*Aplicació de Seguiment d'Alumnes - CFA La Pau</title>
+    <title>Aplicació de Seguiment d'Alumnes - CFA La Pau</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -694,7 +694,6 @@
             const cursos = [...new Set(state.grups.map(g => g['Curs Acadèmic']))];
             const cursSelect = document.getElementById('matricula-curs');
             
-            // Populate Curs dropdown only if it's not already populated
             if (cursSelect.options.length <= 1) {
                 cursSelect.innerHTML = '<option value="">Selecciona un curs...</option>' + cursos.sort().map(c => `<option value="${c}">${c}</option>`).join('');
             }
@@ -852,6 +851,7 @@
             const currentSelectedCurs = selectedCurs || previousCurs;
             
             if (currentSelectedCurs) {
+                ensenyamentSelect.disabled = false;
                 const ensenyaments = [...new Set(state.grups.filter(g => g['Curs Acadèmic'] === currentSelectedCurs).map(g => g['Ensenyament']))];
                 ensenyamentSelect.innerHTML = '<option value="">Tots els Ensenyaments</option>' + ensenyaments.sort().map(e => `<option value="${e}">${e}</option>`).join('');
                 if (selectedCurs) ensenyamentSelect.value = selectedEnsenyament || "";
