@@ -540,17 +540,30 @@
                 fetchData('Anotacions')
             ]);
             
-            initGrupsTab();
-            initAlumnesTab();
-            initAnotacionsTab();
-            initDiariTab();
-
+            initTabs();
+            
             document.getElementById('anotacio-data').valueAsDate = new Date();
             document.getElementById('diari-data').valueAsDate = new Date();
             document.getElementById('anotacio-alumne-data').valueAsDate = new Date();
 
             hideLoading();
             showTab('grups');
+        }
+
+        function initTabs() {
+            initGrupsTab();
+            initAlumnesTab();
+            initAnotacionsTab();
+            initDiariTab();
+        }
+
+        function refreshAllDropdowns() {
+            // This function will re-populate all dynamic dropdowns
+            populateGrupCursSelector();
+            populateAlumneSelector();
+            populateMatriculaDropdowns();
+            populateAnotacionsFilters();
+            initDiariTab(); // Re-initializes the diary tab dropdowns
         }
 
         // --- GESTIÓ DE GRUPS TAB ---
@@ -649,8 +662,7 @@
             const result = await postData('Grups', newGrup);
             if(result.success) {
                 state.grups.push(newGrup);
-                populateGrupCursSelector();
-                populateGrupEnsenyamentsList(curs);
+                refreshAllDropdowns();
                 e.target.reset();
                 showToast('Grup afegit correctament!');
             }
@@ -664,6 +676,7 @@
             document.getElementById('form-add-alumne').addEventListener('submit', handleAddAlumne);
             document.getElementById('form-add-matricula').addEventListener('submit', handleAddMatricula);
             document.getElementById('form-add-anotacio-alumne').addEventListener('submit', handleAddAnotacioFromAlumneTab);
+            document.getElementById('matricula-curs').addEventListener('change', (e) => populateMatriculaDropdowns(e.target.value));
         }
 
         function populateAlumneSelector() {
@@ -677,12 +690,24 @@
             });
         }
 
-        function populateMatriculaDropdowns() {
+        function populateMatriculaDropdowns(selectedCurs = null) {
             const cursos = [...new Set(state.grups.map(g => g['Curs Acadèmic']))];
-            const ensenyaments = [...new Set(state.grups.map(g => g['Ensenyament']))];
             const cursSelect = document.getElementById('matricula-curs');
+            
+            // Populate Curs dropdown only if it's not already populated
+            if (cursSelect.options.length <= 1) {
+                cursSelect.innerHTML = '<option value="">Selecciona un curs...</option>' + cursos.sort().map(c => `<option value="${c}">${c}</option>`).join('');
+            }
+
             const ensenyamentSelect = document.getElementById('matricula-ensenyament');
-            cursSelect.innerHTML = cursos.sort().map(c => `<option value="${c}">${c}</option>`).join('');
+            const currentSelectedCurs = selectedCurs || cursSelect.value;
+            
+            if (!currentSelectedCurs) {
+                ensenyamentSelect.innerHTML = '<option value="">Tria un curs primer</option>';
+                return;
+            }
+
+            const ensenyaments = [...new Set(state.grups.filter(g => g['Curs Acadèmic'] === currentSelectedCurs).map(g => g['Ensenyament']))];
             ensenyamentSelect.innerHTML = ensenyaments.sort().map(e => `<option value="${e}">${e}</option>`).join('');
         }
 
@@ -744,7 +769,7 @@
             const result = await postData('Alumnes', newAlumne);
             if(result.success) {
                 state.alumnes.push(newAlumne);
-                populateAlumneSelector();
+                refreshAllDropdowns();
                 e.target.reset();
                 showToast('Alumne afegit correctament!');
             }
@@ -797,26 +822,47 @@
         // --- ANOTACIONS TAB ---
         function initAnotacionsTab() {
             populateAnotacionsFilters();
-            document.getElementById('filter-curs').addEventListener('change', handleAnotacionsFilterChange);
-            document.getElementById('filter-ensenyament').addEventListener('change', handleAnotacionsFilterChange);
+            document.getElementById('filter-curs').addEventListener('change', (e) => populateAnotacionsFilters(e.target.value));
+            document.getElementById('filter-ensenyament').addEventListener('change', (e) => populateAnotacionsFilters(document.getElementById('filter-curs').value, e.target.value));
             document.getElementById('filter-alumne').addEventListener('change', handleAnotacionsFilterChange);
             document.getElementById('form-add-anotacio').addEventListener('submit', handleAddAnotacio);
             document.getElementById('btn-gemini').addEventListener('click', handleGeminiClick);
-            handleAnotacionsFilterChange();
         }
 
-        function populateAnotacionsFilters() {
-            const cursos = [...new Set(state.grups.map(g => g['Curs Acadèmic']))];
-            const ensenyaments = [...new Set(state.grups.map(g => g['Ensenyament']))];
-            const alumnes = [...new Set(state.alumnes.map(a => a.Nom))];
-
+        function populateAnotacionsFilters(selectedCurs = null, selectedEnsenyament = null) {
             const cursSelect = document.getElementById('filter-curs');
             const ensenyamentSelect = document.getElementById('filter-ensenyament');
             const alumneSelect = document.getElementById('filter-alumne');
 
-            cursSelect.innerHTML = '<option value="">Tots els Cursos</option>' + cursos.sort().map(c => `<option value="${c}">${c}</option>`).join('');
-            ensenyamentSelect.innerHTML = '<option value="">Tots els Ensenyaments</option>' + ensenyaments.sort().map(e => `<option value="${e}">${e}</option>`).join('');
-            alumneSelect.innerHTML = '<option value="">Tots els Alumnes</option>' + alumnes.sort().map(a => `<option value="${a}">${a}</option>`).join('');
+            if (!selectedCurs && !selectedEnsenyament) { // First load
+                const cursos = [...new Set(state.grups.map(g => g['Curs Acadèmic']))];
+                cursSelect.innerHTML = '<option value="">Tots els Cursos</option>' + cursos.sort().map(c => `<option value="${c}">${c}</option>`).join('');
+            }
+
+            const currentSelectedCurs = selectedCurs || cursSelect.value;
+            
+            // Populate Ensenyament based on Curs
+            if (currentSelectedCurs) {
+                const ensenyaments = [...new Set(state.grups.filter(g => g['Curs Acadèmic'] === currentSelectedCurs).map(g => g['Ensenyament']))];
+                ensenyamentSelect.innerHTML = '<option value="">Tots els Ensenyaments</option>' + ensenyaments.sort().map(e => `<option value="${e}">${e}</option>`).join('');
+            } else {
+                ensenyamentSelect.innerHTML = '<option value="">Tria un curs primer</option>';
+            }
+
+            // Populate Alumne based on Curs and Ensenyament
+            const currentSelectedEnsenyament = selectedEnsenyament || ensenyamentSelect.value;
+            if (currentSelectedCurs && currentSelectedEnsenyament) {
+                const alumnes = [...new Set(state.matricules.filter(m => m.Curs === currentSelectedCurs && m.Ensenyament === currentSelectedEnsenyament).map(m => m.Alumne))];
+                alumneSelect.innerHTML = '<option value="">Tots els Alumnes</option>' + alumnes.sort().map(a => `<option value="${a}">${a}</option>`).join('');
+            } else if (currentSelectedCurs) {
+                const alumnes = [...new Set(state.matricules.filter(m => m.Curs === currentSelectedCurs).map(m => m.Alumne))];
+                alumneSelect.innerHTML = '<option value="">Tots els Alumnes</option>' + alumnes.sort().map(a => `<option value="${a}">${a}</option>`).join('');
+            } else {
+                 const allAlumnes = [...new Set(state.alumnes.map(a => a.Nom))];
+                 alumneSelect.innerHTML = '<option value="">Tots els Alumnes</option>' + allAlumnes.sort().map(a => `<option value="${a}">${a}</option>`).join('');
+            }
+
+            handleAnotacionsFilterChange();
         }
 
         function handleAnotacionsFilterChange() {
@@ -833,8 +879,9 @@
                 filtered = filtered.filter(a => a.Alumne === alumne);
             }
             if (curs) {
-                const alumnesDelCurs = state.matricules.filter(m => m.Curs === curs).map(m => m.Alumne);
-                const ensenyamentsDelCurs = state.grups.filter(g => g['Curs Acadèmic'] === curs).map(g => g.Ensenyament);
+                const matriculesDelCurs = state.matricules.filter(m => m.Curs === curs);
+                const alumnesDelCurs = matriculesDelCurs.map(m => m.Alumne);
+                const ensenyamentsDelCurs = matriculesDelCurs.map(m => m.Ensenyament);
                 filtered = filtered.filter(a => alumnesDelCurs.includes(a.Alumne) && ensenyamentsDelCurs.includes(a.Ensenyament));
             }
 
@@ -934,16 +981,25 @@
         // --- DIARI DE CLASSE TAB ---
         function initDiariTab() {
             const cursos = [...new Set(state.grups.map(g => g['Curs Acadèmic']))];
-            const ensenyaments = [...new Set(state.grups.map(g => g['Ensenyament']))];
             const cursSelect = document.getElementById('diari-curs');
-            const ensenyamentSelect = document.getElementById('diari-ensenyament');
             cursSelect.innerHTML = '<option value="">Selecciona Curs</option>' + cursos.sort().map(c => `<option value="${c}">${c}</option>`).join('');
-            ensenyamentSelect.innerHTML = '<option value="">Selecciona Ensenyament</option>' + ensenyaments.sort().map(e => `<option value="${e}">${e}</option>`).join('');
             
-            document.getElementById('diari-curs').addEventListener('change', handleDiariFilterChange);
+            document.getElementById('diari-curs').addEventListener('change', (e) => populateDiariEnsenyaments(e.target.value));
             document.getElementById('diari-ensenyament').addEventListener('change', handleDiariFilterChange);
             document.getElementById('btn-duplicar-fila').addEventListener('click', handleDuplicarFila);
             document.getElementById('btn-guardar-diari').addEventListener('click', handleGuardarDiari);
+            populateDiariEnsenyaments(cursSelect.value);
+        }
+
+        function populateDiariEnsenyaments(curs) {
+            const ensenyamentSelect = document.getElementById('diari-ensenyament');
+            if (!curs) {
+                ensenyamentSelect.innerHTML = '<option value="">Tria un curs primer</option>';
+                return;
+            }
+            const ensenyaments = [...new Set(state.grups.filter(g => g['Curs Acadèmic'] === curs).map(g => g['Ensenyament']))];
+            ensenyamentSelect.innerHTML = '<option value="">Selecciona Ensenyament</option>' + ensenyaments.sort().map(e => `<option value="${e}">${e}</option>`).join('');
+            handleDiariFilterChange();
         }
 
         function handleDiariFilterChange() {
