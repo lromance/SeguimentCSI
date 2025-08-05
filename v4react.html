@@ -1,282 +1,342 @@
-import React, { useState, useEffect, useCallback } from 'react';
-
-// --- CONFIGURATION ---
-const CLIENT_ID = '134551406037-r4v2505iif2uqreoerjid61bcv4aktgl.apps.googleusercontent.com';
-const API_KEY = 'AIzaSyD69lkn4BcjOaR3DFJZarcQcs8dgT4CYfU';
-const GEMINI_API_KEY = "AIzaSyDHLqY0bxDKJPS7hmVY1zTmzlivK5f4OhQ";
-const SPREADSHEET_ID = '1wlvnGyvwsIReC_1bSkB2wo4UecJPNpOTs2ksB2n8Iqc';
-const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
-
-// --- HELPER COMPONENTS ---
-
-const Modal = ({ isOpen, title, children, onClose }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
-            <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full">
-                <h2 className="text-xl font-bold mb-4">{title}</h2>
-                <div className="prose max-w-none max-h-[60vh] overflow-y-auto bg-gray-50 p-4 rounded-md border">
-                    {children}
-                </div>
-                <button onClick={onClose} className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md">
-                    Tancar
-                </button>
-            </div>
-        </div>
-    );
-};
-
-const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded-lg shadow-xl text-center">
-                <p className="mb-4 text-lg">{message}</p>
-                <button onClick={onConfirm} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg mr-2">Sí</button>
-                <button onClick={onCancel} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg">No</button>
-            </div>
-        </div>
-    );
-};
-
-const LoadingModal = ({ isOpen }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-8 rounded-lg shadow-xl text-center flex items-center gap-4">
-                 <i className="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
-                 <p className="text-lg font-semibold">Processant...</p>
-            </div>
-        </div>
-    );
-};
-
-const Toast = ({ message, type, onHide }) => {
-    useEffect(() => {
-        const timer = setTimeout(onHide, type === 'error' ? 8000 : 3000);
-        return () => clearTimeout(timer);
-    }, [onHide, type]);
-
-    if (!message) return null;
-
-    const bgColor = type === 'error' ? 'bg-red-600' : 'bg-green-600';
-
-    return (
-        <div className={`fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${bgColor}`}>
-            <p>{message}</p>
-        </div>
-    );
-};
-
-
-// --- MAIN APP COMPONENT ---
-
-function App() {
-    // --- STATE MANAGEMENT ---
-    const [gapiReady, setGapiReady] = useState(false);
-    const [gisReady, setGisReady] = useState(false);
-    const [tokenClient, setTokenClient] = useState(null);
-    const [isSignedIn, setIsSignedIn] = useState(false);
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicació de Seguiment d'Alumnes - CFA La Pau</title>
     
-    const [activeTab, setActiveTab] = useState('grups');
-    const [isLoading, setIsLoading] = useState(true);
-    const [toast, setToast] = useState({ message: '', type: 'success' });
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    // Data state
-    const [state, setState] = useState({
-        grups: [],
-        alumnes: [],
-        matricules: [],
-        anotacions: [],
-    });
+    <!-- React Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel Compiler -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    // --- API & DATA HANDLING ---
-    const showToast = useCallback((message, type = 'success') => {
-        setToast({ message, type });
-    }, []);
-
-    const fetchData = useCallback(async (sheetName) => {
-        try {
-            const response = await gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: sheetName,
-            });
-            const rows = response.result.values || [];
-            if (rows.length < 1) return [];
-            const headers = rows.shift();
-            return rows.map(row => {
-                let obj = {};
-                headers.forEach((header, index) => {
-                    obj[header] = row[index];
-                });
-                return obj;
-            });
-        } catch (err) {
-            console.error(`Error completo al cargar datos de ${sheetName}:`, err);
-            showToast(`Error al cargar datos de ${sheetName}: ${err.result.error.message}`, 'error');
-            return [];
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            min-height: 100vh;
         }
-    }, [showToast]);
+        .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
+        .tipo-academic { background-color: #dbeafe; color: #1e40af; }
+        .tipo-social { background-color: #ede9fe; color: #5b21b6; }
+        .tipo-absentisme { background-color: #fef3c7; color: #b45309; }
+        .tipo-baixa { background-color: #fee2e2; color: #991b1b; }
+        .tipo-derivacio { background-color: #dcfce7; color: #166534; }
+        .tipo-tutoria { background-color: #cffafe; color: #0891b2; }
+        .tipo-default { background-color: #e5e7eb; color: #4b5563; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="text-gray-800">
 
-    const postData = useCallback(async (sheetName, data) => {
-        setIsLoading(true);
-        try {
-            const dataArray = Array.isArray(data) ? data : [data];
-            if (dataArray.length === 0) return { success: true };
+    <div id="root"></div>
 
-            const headerResponse = await gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: `${sheetName}!1:1`,
+    <!-- Google API Client Library and Google Identity Services -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <script type="text/babel">
+        // --- REACT CODE STARTS HERE ---
+
+        const { useState, useEffect, useCallback } = React;
+
+        // --- CONFIGURATION ---
+        const CLIENT_ID = '134551406037-r4v2505iif2uqreoerjid61bcv4aktgl.apps.googleusercontent.com';
+        const API_KEY = 'AIzaSyD69lkn4BcjOaR3DFJZarcQcs8dgT4CYfU';
+        const GEMINI_API_KEY = "AIzaSyDHLqY0bxDKJPS7hmVY1zTmzlivK5f4OhQ";
+        const SPREADSHEET_ID = '1wlvnGyvwsIReC_1bSkB2wo4UecJPNpOTs2ksB2n8Iqc';
+        const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+        const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
+
+        // --- HELPER COMPONENTS ---
+
+        const Modal = ({ isOpen, title, children, onClose }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4">
+                    <div className="bg-white p-6 rounded-lg shadow-xl max-w-2xl w-full">
+                        <h2 className="text-xl font-bold mb-4">{title}</h2>
+                        <div className="prose max-w-none max-h-[60vh] overflow-y-auto bg-gray-50 p-4 rounded-md border">
+                            {children}
+                        </div>
+                        <button onClick={onClose} className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-md">
+                            Tancar
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const ConfirmationModal = ({ isOpen, message, onConfirm, onCancel }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-xl text-center">
+                        <p className="mb-4 text-lg">{message}</p>
+                        <button onClick={onConfirm} className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg mr-2">Sí</button>
+                        <button onClick={onCancel} className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg">No</button>
+                    </div>
+                </div>
+            );
+        };
+
+        const LoadingModal = ({ isOpen }) => {
+            if (!isOpen) return null;
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+                    <div className="bg-white p-8 rounded-lg shadow-xl text-center flex items-center gap-4">
+                         <i className="fas fa-spinner fa-spin text-4xl text-purple-600"></i>
+                         <p className="text-lg font-semibold">Processant...</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const Toast = ({ message, type, onHide }) => {
+            useEffect(() => {
+                const timer = setTimeout(onHide, type === 'error' ? 8000 : 3000);
+                return () => clearTimeout(timer);
+            }, [onHide, type]);
+
+            if (!message) return null;
+
+            const bgColor = type === 'error' ? 'bg-red-600' : 'bg-green-600';
+
+            return (
+                <div className={`fixed bottom-5 right-5 text-white py-3 px-6 rounded-lg shadow-xl transition-opacity duration-300 z-50 ${bgColor}`}>
+                    <p>{message}</p>
+                </div>
+            );
+        };
+
+
+        // --- MAIN APP COMPONENT ---
+
+        function App() {
+            // --- STATE MANAGEMENT ---
+            const [gapiReady, setGapiReady] = useState(false);
+            const [gisReady, setGisReady] = useState(false);
+            const [tokenClient, setTokenClient] = useState(null);
+            const [isSignedIn, setIsSignedIn] = useState(false);
+            
+            const [activeTab, setActiveTab] = useState('grups');
+            const [isLoading, setIsLoading] = useState(true);
+            const [toast, setToast] = useState({ message: '', type: 'success' });
+
+            // Data state
+            const [state, setState] = useState({
+                grups: [],
+                alumnes: [],
+                matricules: [],
+                anotacions: [],
             });
-            const headers = headerResponse.result.values[0];
 
-            const valuesToAppend = dataArray.map(obj => headers.map(header => obj[header] || ""));
+            // --- API & DATA HANDLING ---
+            const showToast = useCallback((message, type = 'success') => {
+                setToast({ message, type });
+            }, []);
 
-            await gapi.client.sheets.spreadsheets.values.append({
-                spreadsheetId: SPREADSHEET_ID,
-                range: `${sheetName}!A1`,
-                valueInputOption: 'USER_ENTERED',
-                insertDataOption: 'INSERT_ROWS',
-                resource: { values: valuesToAppend },
-            });
-            return { success: true };
-        } catch (err) {
-            console.error(`Error completo al guardar datos en ${sheetName}:`, err);
-            showToast(`Error guardando datos: ${err.result.error.message}`, 'error');
-            return { success: false };
-        } finally {
-            setIsLoading(false);
-        }
-    }, [showToast]);
+            const fetchData = useCallback(async (sheetName) => {
+                try {
+                    const response = await gapi.client.sheets.spreadsheets.values.get({
+                        spreadsheetId: SPREADSHEET_ID,
+                        range: sheetName,
+                    });
+                    const rows = response.result.values || [];
+                    if (rows.length < 1) return [];
+                    const headers = rows.shift();
+                    return rows.map(row => {
+                        let obj = {};
+                        headers.forEach((header, index) => {
+                            obj[header] = row[index];
+                        });
+                        return obj;
+                    });
+                } catch (err) {
+                    console.error(`Error completo al cargar datos de ${sheetName}:`, err);
+                    showToast(`Error al cargar datos de ${sheetName}: ${err.result.error.message}`, 'error');
+                    return [];
+                }
+            }, [showToast]);
 
-    // --- AUTHENTICATION FLOW ---
-    useEffect(() => {
-        // Load GAPI script
-        const gapiScript = document.createElement('script');
-        gapiScript.src = 'https://apis.google.com/js/api.js';
-        gapiScript.onload = () => gapi.load('client', initializeGapiClient);
-        document.body.appendChild(gapiScript);
+            const postData = useCallback(async (sheetName, data) => {
+                setIsLoading(true);
+                try {
+                    const dataArray = Array.isArray(data) ? data : [data];
+                    if (dataArray.length === 0) return { success: true };
 
-        // Load GIS script
-        const gisScript = document.createElement('script');
-        gisScript.src = 'https://accounts.google.com/gsi/client';
-        gisScript.async = true;
-        gisScript.defer = true;
-        gisScript.onload = () => setGisReady(true);
-        document.body.appendChild(gisScript);
-    }, []);
+                    const headerResponse = await gapi.client.sheets.spreadsheets.values.get({
+                        spreadsheetId: SPREADSHEET_ID,
+                        range: `${sheetName}!1:1`,
+                    });
+                    const headers = headerResponse.result.values[0];
 
-    const initializeGapiClient = useCallback(async () => {
-        try {
-            await gapi.client.init({
-                apiKey: API_KEY,
-                discoveryDocs: DISCOVERY_DOCS,
-            });
-            setGapiReady(true);
-        } catch (err) {
-            console.error("Error al inicialitzar el client de GAPI:", err);
-            showToast("Error al carregar l'API de Google.", 'error');
-        }
-    }, [showToast]);
+                    const valuesToAppend = dataArray.map(obj => headers.map(header => obj[header] || ""));
 
-    useEffect(() => {
-        if (gapiReady) {
-            const client = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID,
-                scope: SCOPES,
-                callback: async (resp) => {
-                    if (resp.error !== undefined) {
-                        throw (resp);
-                    }
-                    setIsSignedIn(true);
-                },
-            });
-            setTokenClient(client);
-        }
-    }, [gapiReady]);
+                    await gapi.client.sheets.spreadsheets.values.append({
+                        spreadsheetId: SPREADSHEET_ID,
+                        range: `${sheetName}!A1`,
+                        valueInputOption: 'USER_ENTERED',
+                        insertDataOption: 'INSERT_ROWS',
+                        resource: { values: valuesToAppend },
+                    });
+                    return { success: true };
+                } catch (err) {
+                    console.error(`Error completo al guardar datos en ${sheetName}:`, err);
+                    showToast(`Error guardando datos: ${err.result.error.message}`, 'error');
+                    return { success: false };
+                } finally {
+                    setIsLoading(false);
+                }
+            }, [showToast]);
 
-    const handleCredentialResponse = useCallback((response) => {
-        if (response.credential && tokenClient) {
-            tokenClient.requestAccessToken({ prompt: '' });
-        }
-    }, [tokenClient]);
+            // --- AUTHENTICATION FLOW ---
+            useEffect(() => {
+                const gapiScript = document.createElement('script');
+                gapiScript.src = 'https://apis.google.com/js/api.js';
+                gapiScript.onload = () => gapi.load('client', initializeGapiClient);
+                document.body.appendChild(gapiScript);
 
-    useEffect(() => {
-        if (gisReady) {
-            window.handleCredentialResponse = handleCredentialResponse;
-            google.accounts.id.initialize({
-                client_id: CLIENT_ID,
-                callback: handleCredentialResponse,
-            });
-            google.accounts.id.renderButton(
-                document.getElementById('g_id_signin'),
-                { theme: "outline", size: "large", text: "sign_in_with", shape: "rectangular", logo_alignment: "left", width: "300" }
+                const gisScript = document.createElement('script');
+                gisScript.src = 'https://accounts.google.com/gsi/client';
+                gisScript.async = true;
+                gisScript.defer = true;
+                gisScript.onload = () => setGisReady(true);
+                document.body.appendChild(gisScript);
+            }, []);
+
+            const initializeGapiClient = useCallback(async () => {
+                try {
+                    await gapi.client.init({
+                        apiKey: API_KEY,
+                        discoveryDocs: DISCOVERY_DOCS,
+                    });
+                    setGapiReady(true);
+                } catch (err) {
+                    console.error("Error al inicialitzar el client de GAPI:", err);
+                    showToast("Error al carregar l'API de Google.", 'error');
+                }
+            }, [showToast]);
+
+            useEffect(() => {
+                if (gapiReady) {
+                    const client = google.accounts.oauth2.initTokenClient({
+                        client_id: CLIENT_ID,
+                        scope: SCOPES,
+                        callback: async (resp) => {
+                            if (resp.error !== undefined) {
+                                throw (resp);
+                            }
+                            setIsSignedIn(true);
+                        },
+                    });
+                    setTokenClient(client);
+                }
+            }, [gapiReady]);
+
+            const handleCredentialResponse = useCallback((response) => {
+                if (response.credential && tokenClient) {
+                    tokenClient.requestAccessToken({ prompt: '' });
+                }
+            }, [tokenClient]);
+
+            useEffect(() => {
+                if (gisReady) {
+                    window.handleCredentialResponse = handleCredentialResponse;
+                    google.accounts.id.initialize({
+                        client_id: CLIENT_ID,
+                        callback: handleCredentialResponse,
+                    });
+                    google.accounts.id.renderButton(
+                        document.getElementById('g_id_signin'),
+                        { theme: "outline", size: "large", text: "sign_in_with", shape: "rectangular", logo_alignment: "left", width: "300" }
+                    );
+                }
+            }, [gisReady, handleCredentialResponse]);
+
+            // --- APP INITIALIZATION AFTER LOGIN ---
+            const initializeApp = useCallback(async () => {
+                setIsLoading(true);
+                const [grups, alumnes, matricules, anotacions] = await Promise.all([
+                    fetchData('Grups'),
+                    fetchData('Alumnes'),
+                    fetchData('Matrícules'),
+                    fetchData('Anotacions')
+                ]);
+                setState({ grups, alumnes, matricules, anotacions });
+                setIsLoading(false);
+            }, [fetchData]);
+
+            useEffect(() => {
+                if (isSignedIn) {
+                    initializeApp();
+                }
+            }, [isSignedIn, initializeApp]);
+
+
+            // --- RENDER LOGIC ---
+            if (!isSignedIn) {
+                return (
+                    <div className="container mx-auto p-4 md:p-8">
+                        <div id="auth-container" className="bg-white p-6 rounded-2xl shadow-xl border border-gray-200 text-center max-w-md mx-auto">
+                            <h1 className="text-2xl font-bold text-gray-900">Seguiment d'Alumnes</h1>
+                            <p className="text-gray-600 mt-2 mb-6">Per començar, si us plau, inicia sessió amb el teu compte de Google.</p>
+                            <div id="g_id_signin"></div>
+                            <p id="auth-status" className="mt-4 text-sm text-gray-500">
+                                {gapiReady && gisReady ? "Llest per iniciar sessió." : "Carregant API de Google..."}
+                            </p>
+                        </div>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="container mx-auto p-4 md:p-8">
+                    <header className="bg-white/30 backdrop-blur-sm p-4 rounded-xl shadow-lg mb-8">
+                         <div className="flex flex-col md:flex-row justify-between items-center">
+                            <div className="text-center md:text-left">
+                                <h1 className="text-2xl font-bold text-white">Seguiment d'Alumnes</h1>
+                                <p className="text-white/80 font-semibold">CFA La Pau</p>
+                            </div>
+                            <nav className="flex flex-wrap justify-center gap-2 mt-4 md:mt-0">
+                                <button onClick={() => setActiveTab('grups')} className="nav-button active:scale-95 transition-transform bg-white/80 hover:bg-white text-purple-700 font-semibold py-2 px-4 rounded-lg shadow-md"><i className="fas fa-users mr-2"></i>Gestió de Grups</button>
+                                <button onClick={() => setActiveTab('alumnes')} className="nav-button active:scale-95 transition-transform bg-white/80 hover:bg-white text-purple-700 font-semibold py-2 px-4 rounded-lg shadow-md"><i className="fas fa-user-graduate mr-2"></i>Gestió d'Alumnes</button>
+                                <button onClick={() => setActiveTab('anotacions')} className="nav-button active:scale-95 transition-transform bg-white/80 hover:bg-white text-purple-700 font-semibold py-2 px-4 rounded-lg shadow-md"><i className="fas fa-clipboard-list mr-2"></i>Anotacions</button>
+                                <button onClick={() => setActiveTab('diari')} className="nav-button active:scale-95 transition-transform bg-white/80 hover:bg-white text-purple-700 font-semibold py-2 px-4 rounded-lg shadow-md"><i className="fas fa-book-open mr-2"></i>Diari de Classe</button>
+                            </nav>
+                        </div>
+                    </header>
+
+                    <main>
+                        {/* Render tabs based on activeTab state */}
+                    </main>
+                    
+                    <LoadingModal isOpen={isLoading} />
+                    <Toast message={toast.message} type={toast.type} onHide={() => setToast({ message: '', type: 'success' })} />
+                </div>
             );
         }
-    }, [gisReady, handleCredentialResponse]);
 
-    // --- APP INITIALIZATION AFTER LOGIN ---
-    const initializeApp = useCallback(async () => {
-        setIsLoading(true);
-        const [grups, alumnes, matricules, anotacions] = await Promise.all([
-            fetchData('Grups'),
-            fetchData('Matrícules'), // Corrected typo
-            fetchData('Alumnes'),
-            fetchData('Anotacions')
-        ]);
-        setState({ grups, alumnes, matricules, anotacions });
-        setIsLoading(false);
-    }, [fetchData]);
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<App />);
 
-    useEffect(() => {
-        if (isSignedIn) {
-            initializeApp();
-        }
-    }, [isSignedIn, initializeApp]);
-
-
-    // --- RENDER LOGIC ---
-    if (!isSignedIn) {
-        return (
-            <div className="container mx-auto p-4 md:p-8">
-                <div id="auth-container" className="bg-white p-6 rounded-2xl shadow-xl border border-gray-200 text-center max-w-md mx-auto">
-                    <h1 className="text-2xl font-bold text-gray-900">Seguiment d'Alumnes</h1>
-                    <p className="text-gray-600 mt-2 mb-6">Per començar, si us plau, inicia sessió amb el teu compte de Google.</p>
-                    <div id="g_id_signin"></div>
-                    <p id="auth-status" className="mt-4 text-sm text-gray-500">
-                        {gapiReady && gisReady ? "Llest per iniciar sessió." : "Carregant API de Google..."}
-                    </p>
-                </div>
-            </div>
-        );
-    }
-    
-    return (
-        <div className="container mx-auto p-4 md:p-8">
-            <header className="bg-white/30 backdrop-blur-sm p-4 rounded-xl shadow-lg mb-8">
-                 <div className="flex flex-col md:flex-row justify-between items-center">
-                    <div className="text-center md:text-left">
-                        <h1 className="text-2xl font-bold text-white">Seguiment d'Alumnes</h1>
-                        <p className="text-white/80 font-semibold">CFA La Pau</p>
-                    </div>
-                    <nav className="flex flex-wrap justify-center gap-2 mt-4 md:mt-0">
-                        <button onClick={() => setActiveTab('grups')} className="nav-button active:scale-95 transition-transform bg-white/80 hover:bg-white text-purple-700 font-semibold py-2 px-4 rounded-lg shadow-md"><i className="fas fa-users mr-2"></i>Gestió de Grups</button>
-                        <button onClick={() => setActiveTab('alumnes')} className="nav-button active:scale-95 transition-transform bg-white/80 hover:bg-white text-purple-700 font-semibold py-2 px-4 rounded-lg shadow-md"><i className="fas fa-user-graduate mr-2"></i>Gestió d'Alumnes</button>
-                        <button onClick={() => setActiveTab('anotacions')} className="nav-button active:scale-95 transition-transform bg-white/80 hover:bg-white text-purple-700 font-semibold py-2 px-4 rounded-lg shadow-md"><i className="fas fa-clipboard-list mr-2"></i>Anotacions</button>
-                        <button onClick={() => setActiveTab('diari')} className="nav-button active:scale-95 transition-transform bg-white/80 hover:bg-white text-purple-700 font-semibold py-2 px-4 rounded-lg shadow-md"><i className="fas fa-book-open mr-2"></i>Diari de Classe</button>
-                    </nav>
-                </div>
-            </header>
-
-            <main>
-                {/* Render tabs based on activeTab state */}
-            </main>
-            
-            <LoadingModal isOpen={isLoading} />
-            <Toast message={toast.message} type={toast.type} onHide={() => setToast({ message: '', type: 'success' })} />
-        </div>
-    );
-}
-
-export default App;
+    </script>
+</body>
+</html>
